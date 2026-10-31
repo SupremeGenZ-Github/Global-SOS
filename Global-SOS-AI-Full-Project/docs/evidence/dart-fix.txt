@@ -1,0 +1,10 @@
+Computing fixes in android...
+Applying fixes...
+
+lib\main.dart
+  curly_braces_in_flow_control_structures - 6 fixes
+
+lib\services.dart
+  curly_braces_in_flow_control_structures - 11 fixes
+
+17 fixes made in 2 files.

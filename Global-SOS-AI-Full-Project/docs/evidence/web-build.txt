@@ -1,0 +1,13 @@
+
+> global-sos-ai@0.1.0 build
+> tsc --noEmit -p website/tsconfig.json && vite build --config website/vite.config.ts
+
+[36mvite v7.1.12 [32mbuilding for production...[36m[39m
+transforming...
+[32m✓[39m 30 modules transformed.
+rendering chunks...
+computing gzip size...
+[2mdist/[22m[32mindex.html                 [39m[1m[2m  0.56 kB[22m[1m[22m[2m │ gzip:  0.38 kB[22m
+[2mdist/[22m[35massets/index-DmgPyrwd.css  [39m[1m[2m 12.49 kB[22m[1m[22m[2m │ gzip:  3.69 kB[22m
+[2mdist/[22m[36massets/index-CQuw_0xO.js   [39m[1m[2m315.25 kB[22m[1m[22m[2m │ gzip: 79.30 kB[22m
+[32m✓ built in 4.18s[39m

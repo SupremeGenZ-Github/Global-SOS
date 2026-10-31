@@ -1,0 +1,14 @@
+{
+  "health": {
+    "status": "alive",
+    "version": "0.1.0"
+  },
+  "ready": {
+    "status": "ready",
+    "storage": "read_only_snapshot",
+    "generative_ai": "not_configured"
+  },
+  "records": 82,
+  "index_status": 200,
+  "service_worker_status": 200
+}

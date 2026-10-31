@@ -1,0 +1,38 @@
+{
+  "name": "global-sos-ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "scripts": {
+    "dev": "node --env-file-if-exists=.env backend/server.mjs",
+    "start": "node --env-file-if-exists=.env backend/server.mjs",
+    "build": "tsc --noEmit -p website/tsconfig.json && vite build --config website/vite.config.ts",
+    "test": "node --test tests/*.test.mjs",
+    "migrate": "node --env-file-if-exists=.env backend/migrate.mjs",
+    "monitor": "node --env-file-if-exists=.env backend/monitor.mjs",
+    "prepare:android": "node scripts/prepare-android.mjs"
+  },
+  "dependencies": {
+    "express": "5.1.0",
+    "express-rate-limit": "8.7.2",
+    "helmet": "8.1.0",
+    "pg": "8.16.3",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "robots-parser": "3.0.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.3.14",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "@vitejs/plugin-react": "5.0.4",
+    "extract-zip": "2.0.1",
+    "supertest": "7.1.4",
+    "typescript": "5.9.3",
+    "vite": "7.1.12"
+  }
+}

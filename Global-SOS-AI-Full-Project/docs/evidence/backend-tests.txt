@@ -1,0 +1,24 @@
+
+> global-sos-ai@0.1.0 test
+> node --test tests/*.test.mjs
+
+✔ country registry and sourced channels are internally consistent (6587.9155ms)
+✔ health, readiness, unknown API, country validation and CORS (326.493ms)
+✔ filtering cannot leak a different country and handles empty coverage (101.6922ms)
+✔ chat rejects injected model details and never changes country (197.8032ms)
+✔ online provider failure degrades without publishing generated contacts (20.2267ms)
+✔ private SOS requires capability and erases positions on Mark Safe (130.4776ms)
+✔ expired session cannot be read (25.3282ms)
+✔ administrator permissions, two-role approval, revision conflict, history and idempotent seed (483.0139ms)
+✔ source monitor honors robots and does not silently publish contacts (24.3937ms)
+✔ directory version sync and read-only operation without database (32.5861ms)
+✔ chat rate limit returns explicit status (74.8156ms)
+✔ reviewed withdrawal removes a record from synchronization and survives reseeding (302.8625ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14425.0381

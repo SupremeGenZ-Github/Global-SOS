@@ -1,0 +1,6 @@
+00:00 +0: loading C:/Users/Admin/Documents/Codex/2026-10-31/new-chat/work/global-sos-ai/android/test/navigation_test.dart
+00:00 +0: C:/Users/Admin/Documents/Codex/2026-10-31/new-chat/work/global-sos-ai/android/test/navigation_test.dart: directory navigation retains country isolation
+00:00 +1: C:/Users/Admin/Documents/Codex/2026-10-31/new-chat/work/global-sos-ai/android/test/navigation_test.dart: directory navigation retains country isolation
+00:00 +2: C:/Users/Admin/Documents/Codex/2026-10-31/new-chat/work/global-sos-ai/android/test/navigation_test.dart: directory navigation retains country isolation
+00:04 +3: C:/Users/Admin/Documents/Codex/2026-10-31/new-chat/work/global-sos-ai/android/test/navigation_test.dart: offline assistant works with no model and no network
+00:04 +4: All tests passed!

@@ -1,0 +1,3 @@
+import {writeFile} from 'node:fs/promises';
+const base=process.argv[2]||'http://127.0.0.1:3000';
+const health=await(await fetch(base+'/health')).json();const ready=await(await fetch(base+'/ready')).json();const directory=await(await fetch(base+'/api/directory')).json();const index=await fetch(base+'/');const sw=await fetch(base+'/sw.js');const result={health,ready,records:directory.records.length,index_status:index.status,service_worker_status:sw.status};if(index.status!==200||sw.status!==200||health.status!=='alive'||ready.status!=='ready'||directory.records.length===0)throw Error('Startup verification failed');await writeFile(new URL('../docs/evidence/startup-verification.json',import.meta.url),JSON.stringify(result,null,2));console.log(JSON.stringify(result));
