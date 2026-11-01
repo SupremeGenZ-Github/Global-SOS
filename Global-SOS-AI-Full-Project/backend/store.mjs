@@ -1,15 +1,35 @@
 import {readFile} from 'node:fs/promises';
+import {isDeepStrictEqual} from 'node:util';
 import {randomUUID} from 'node:crypto';
 import {categories,sha,token} from './core.mjs';
 export const seed=JSON.parse(await readFile(new URL('../shared/directory.json',import.meta.url),'utf8'));
 export async function migrate(db){await db.query(await readFile(new URL('../database/001_initial.sql',import.meta.url),'utf8'));await db.query("INSERT INTO schema_migrations(version) VALUES('001') ON CONFLICT DO NOTHING");}
 export async function seedDB(db){
  await db.query('BEGIN');try{
+ let changed=0;const alreadySeeded=(await db.query('SELECT version FROM directory_versions LIMIT 1')).rows.length>0;
  await db.query('SELECT version FROM directory_state WHERE singleton=1 FOR UPDATE');
  for(const c of seed.countries)await db.query('INSERT INTO countries(code,name) VALUES($1,$2) ON CONFLICT DO NOTHING',[c.code,c.name]);
  for(const c of categories)await db.query('INSERT INTO categories(id,name) VALUES($1,$2) ON CONFLICT DO NOTHING',[c.id,c.name]);
  for(const s of seed.sources){await db.query('INSERT INTO organizations(id,name,government_affiliation) VALUES($1,$2,$3) ON CONFLICT DO NOTHING',[s.id,s.organization,s.affiliation]);await db.query('INSERT INTO sources(id,url,host,organization_id,approved,last_checked) VALUES($1,$2,$3,$1,true,$4) ON CONFLICT DO NOTHING',[s.id,s.url,new URL(s.url).hostname,seed.checked_at]);}
- for(const r of seed.records){const inserted=await db.query('INSERT INTO helplines(id,country,source_id,payload) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING RETURNING id',[r.id,r.country,r.source_id,JSON.stringify(r)]);if(inserted.rows.length)for(const c of r.channels)await db.query('INSERT INTO channels(helpline_id,kind,value,immediate) VALUES($1,$2,$3,$4)',[r.id,c.kind,c.value,c.immediate]);}
+ for(const r of seed.records){
+  const inserted=await db.query('INSERT INTO helplines(id,country,source_id,payload) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING RETURNING id',[r.id,r.country,r.source_id,JSON.stringify(r)]);
+  let writeChannels=inserted.rows.length>0;
+  if(writeChannels)changed++;
+  else {
+   const old=(await db.query('SELECT * FROM helplines WHERE id=$1 FOR UPDATE',[r.id])).rows[0];
+   // A code release may refresh untouched source-checked seed records. Preserve
+   // administrator-approved changes and withdrawals, including all history.
+   if(old.published&&old.payload.verification_status==='source_checked'&&!isDeepStrictEqual({...old.payload,revision:1},{...r,revision:1})){
+    await db.query('INSERT INTO helpline_history(helpline_id,payload,revision,actor) VALUES($1,$2,$3,$4)',[r.id,old.payload,old.revision,'seed_upgrade']);
+    const payload={...r,revision:old.revision+1};
+    await db.query('UPDATE helplines SET country=$2,source_id=$3,payload=$4,revision=revision+1,updated_at=now() WHERE id=$1',[r.id,r.country,r.source_id,JSON.stringify(payload)]);
+    await db.query('DELETE FROM channels WHERE helpline_id=$1',[r.id]);writeChannels=true;changed++;
+   }
+  }
+  if(writeChannels)for(const c of r.channels)await db.query('INSERT INTO channels(helpline_id,kind,value,immediate) VALUES($1,$2,$3,$4)',[r.id,c.kind,c.value,c.immediate]);
+ }
+ if(alreadySeeded&&changed){const v=await db.query('UPDATE directory_state SET version=version+1 WHERE singleton=1 RETURNING version');await db.query('INSERT INTO directory_versions(version,actor,notes) VALUES($1,$2,$3)',[v.rows[0].version,'seed_upgrade','Government-source directory additions and seed corrections']);}
+
  await db.query("INSERT INTO directory_versions(version,actor,notes) VALUES(1,'seed','Government-page checked seed; no operational certification') ON CONFLICT DO NOTHING");await db.query('COMMIT');
  }catch(e){await db.query('ROLLBACK');throw e;}
 }

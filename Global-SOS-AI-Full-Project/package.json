@@ -1,6 +1,6 @@
 {
   "name": "global-sos-ai",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -9,11 +9,13 @@
   "scripts": {
     "dev": "node --env-file-if-exists=.env backend/server.mjs",
     "start": "node --env-file-if-exists=.env backend/server.mjs",
-    "build": "tsc --noEmit -p website/tsconfig.json && vite build --config website/vite.config.ts",
+    "build": "npm run prepare:download && tsc --noEmit -p website/tsconfig.json && vite build --config website/vite.config.ts",
     "test": "node --test tests/*.test.mjs",
     "migrate": "node --env-file-if-exists=.env backend/migrate.mjs",
     "monitor": "node --env-file-if-exists=.env backend/monitor.mjs",
-    "prepare:android": "node scripts/prepare-android.mjs"
+    "prepare:android": "node scripts/prepare-android.mjs",
+    "prepare:download": "node scripts/prepare-download.mjs",
+    "prestart": "npm run prepare:download"
   },
   "dependencies": {
     "express": "5.1.0",

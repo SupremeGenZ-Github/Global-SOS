@@ -22,3 +22,5 @@ CREATE INDEX IF NOT EXISTS locations_session ON location_updates(session_id,reco
 CREATE TABLE IF NOT EXISTS audit_logs(id bigserial PRIMARY KEY,actor text NOT NULL,action text NOT NULL,target text NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
 CREATE TABLE IF NOT EXISTS model_configuration(id text PRIMARY KEY,payload jsonb NOT NULL);
 CREATE TABLE IF NOT EXISTS sync_metadata(client_id text PRIMARY KEY,last_version bigint,last_sync timestamptz);
+
+CREATE TABLE IF NOT EXISTS notification_attempts(session_id text NOT NULL REFERENCES sos_sessions(id) ON DELETE CASCADE,recipient_hash text NOT NULL,kind text NOT NULL CHECK(kind IN('sms','whatsapp','email')),status text NOT NULL,provider_id text,created_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(session_id,recipient_hash,kind));

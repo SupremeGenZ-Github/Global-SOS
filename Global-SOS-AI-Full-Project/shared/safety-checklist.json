@@ -1,0 +1,8 @@
+[
+ {"id":"country","label":"Confirm my current country"},
+ {"id":"contacts","label":"Add a trusted contact and review their details"},
+ {"id":"favorites","label":"Save useful local services as favorites"},
+ {"id":"permissions","label":"Review location and sharing permissions"},
+ {"id":"offline","label":"Check that my offline directory is available"},
+ {"id":"battery","label":"Check my phone battery and charging options"}
+]

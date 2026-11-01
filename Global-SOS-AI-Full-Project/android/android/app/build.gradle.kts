@@ -25,6 +25,11 @@ android {
     namespace = "org.globalsos.global_sos_ai"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "28.2.13676358"
+    packaging {
+        jniLibs {
+            excludes += listOf("**/armeabi-v7a/**", "**/x86_64/**", "**/x86/**")
+        }
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -41,6 +46,9 @@ android {
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 26
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

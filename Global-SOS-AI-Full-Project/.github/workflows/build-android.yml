@@ -1,0 +1,95 @@
+name: Build Android APK and AAB
+on:
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: HTTPS Render URL (optional; can also be set inside app)
+        required: false
+        type: string
+      production_signing:
+        description: Use configured production upload key (otherwise test signing)
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      API_BASE_URL: ${{ inputs.api_base_url || vars.API_BASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.21.0'
+      - uses: android-actions/setup-android@v3
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.10'
+          channel: stable
+          cache: true
+      - name: Install native build tools
+        run: sdkmanager 'platforms;android-36' 'platforms;android-35' 'platforms;android-34' 'build-tools;36.0.0' 'build-tools;35.0.0' 'ndk;28.2.13676358' 'cmake;3.22.1'
+      - name: Prepare platform if missing
+        run: |
+          if [ ! -f android/android/app/build.gradle.kts ]; then node scripts/prepare-android.mjs; fi
+          chmod +x android/android/gradlew
+      - name: Resolve locked Flutter packages
+        working-directory: android
+        run: flutter pub get --enforce-lockfile
+      - name: Analyze
+        working-directory: android
+        run: flutter analyze
+      - name: Automated tests
+        working-directory: android
+        run: flutter test
+      - name: Configure production signing
+        if: ${{ inputs.production_signing == true }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          UPLOAD_ALIAS: ${{ secrets.KEY_ALIAS }}
+          STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          UPLOAD_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          test -n "$KEYSTORE_BASE64" && test -n "$UPLOAD_ALIAS" && test -n "$STORE_PASSWORD" && test -n "$UPLOAD_PASSWORD"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/upload.jks"
+          echo "KEYSTORE_PATH=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+          echo "KEY_ALIAS=$UPLOAD_ALIAS" >> "$GITHUB_ENV"
+          echo "KEYSTORE_PASSWORD=$STORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "KEY_PASSWORD=$UPLOAD_PASSWORD" >> "$GITHUB_ENV"
+      - name: Build release-mode APK
+        working-directory: android
+        run: flutter build apk --release --target-platform android-arm64 --dart-define="API_BASE_URL=$API_BASE_URL"
+      - name: Build release-mode App Bundle
+        working-directory: android
+        run: flutter build appbundle --release --target-platform android-arm64 --dart-define="API_BASE_URL=$API_BASE_URL"
+      - name: Verify and name artifacts
+        env:
+          PRODUCTION_SIGNING: ${{ inputs.production_signing }}
+        run: |
+          mkdir -p artifacts
+          test -s android/build/app/outputs/flutter-apk/app-release.apk
+          test -s android/build/app/outputs/bundle/release/app-release.aab
+          suffix=TEST-SIGNED
+          if [ "$PRODUCTION_SIGNING" = true ]; then suffix=UPLOAD-KEY-SIGNED; fi
+          cp android/build/app/outputs/flutter-apk/app-release.apk "artifacts/Global-SOS-AI-$suffix.apk"
+          cp android/build/app/outputs/bundle/release/app-release.aab "artifacts/Global-SOS-AI-$suffix.aab"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "artifacts/Global-SOS-AI-$suffix.apk"
+          jarsigner -verify "artifacts/Global-SOS-AI-$suffix.aab"
+          cd artifacts
+          sha256sum * > SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Global-SOS-AI-Android
+          path: artifacts/
+          if-no-files-found: error
+      - name: Remove temporary production keystore
+        if: ${{ always() && inputs.production_signing == true }}
+        run: rm -f "$RUNNER_TEMP/upload.jks"

@@ -51,7 +51,10 @@ final fixture = <String, dynamic>{
     },
   ],
 };
-Future<void> start(WidgetTester tester) async {
+Future<void> start(
+  WidgetTester tester, {
+  Future<void> Function(String)? dialer,
+}) async {
   tester.view.physicalSize = const Size(900, 1400);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
@@ -59,6 +62,7 @@ Future<void> start(WidgetTester tester) async {
   SharedPreferences.setMockInitialValues({'country': 'IN'});
   await tester.pumpWidget(
     GlobalSOS(
+      emergencyDialer: dialer,
       directoryLoader: () async => fixture,
       safetyLoader: () async => <String, dynamic>{
         'contacts': <dynamic>[],
@@ -84,6 +88,62 @@ Future<void> start(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('SOS opens India 112 only after five seconds, without network', (
+    tester,
+  ) async {
+    final dialed = <String>[];
+    await start(
+      tester,
+      dialer: (n) async {
+        dialed.add(n);
+      },
+    );
+    await tester.tap(find.widgetWithText(ElevatedButton, 'SOS'));
+    await tester.pump();
+    expect(find.text('Opening dialer in 5'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 4));
+    expect(dialed, isEmpty);
+    await tester.pump(const Duration(seconds: 1));
+    expect(dialed, ['112']);
+    await tester.pump(const Duration(seconds: 8));
+    expect(dialed, ['112']);
+    await tester.pumpWidget(const SizedBox());
+  });
+  testWidgets('Cancel countdown prevents emergency dialer launch', (
+    tester,
+  ) async {
+    final dialed = <String>[];
+    await start(
+      tester,
+      dialer: (n) async {
+        dialed.add(n);
+      },
+    );
+    await tester.tap(find.widgetWithText(ElevatedButton, 'SOS'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 3));
+    await tester.ensureVisible(find.text('Cancel countdown'));
+    await tester.tap(find.text('Cancel countdown'));
+    await tester.pump(const Duration(seconds: 5));
+    expect(dialed, isEmpty);
+    await tester.pumpWidget(const SizedBox());
+  });
+  testWidgets('Leaving app cancels a pending SOS countdown', (tester) async {
+    final dialed = <String>[];
+    await start(
+      tester,
+      dialer: (n) async {
+        dialed.add(n);
+      },
+    );
+    await tester.tap(find.widgetWithText(ElevatedButton, 'SOS'));
+    await tester.pump();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump(const Duration(seconds: 6));
+    expect(dialed, isEmpty);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpWidget(const SizedBox());
+  });
   testWidgets('directory navigation retains country isolation', (tester) async {
     await start(tester);
     await tester.tap(find.byType(NavigationDestination).at(3));

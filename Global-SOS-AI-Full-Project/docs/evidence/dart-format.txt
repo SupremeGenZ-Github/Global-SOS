@@ -1,3 +1,2 @@
 Formatted lib\main.dart
-Formatted test\navigation_test.dart
-Formatted 4 files (2 changed) in 0.10 seconds.
+Formatted 4 files (1 changed) in 0.23 seconds.

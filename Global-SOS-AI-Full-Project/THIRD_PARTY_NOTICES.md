@@ -17,3 +17,9 @@ Project source: MIT. Government contact facts remain attributed to their origina
 | robots-parser / supertest | MIT; see package-lock.json and installed package LICENSE files |
 
 Dependency lockfiles fix the resolved versions. Android/Flutter builds generate their own runtime license registry. Before binary redistribution, retain required third-party notices and review the exact licenses distributed by the chosen plugin/model revisions. Android SDK and JDK are build tools and are not included in source archives.
+
+## Geographic data
+Natural Earth 1:110m country polygons, public domain. Source: https://github.com/nvkelso/natural-earth-vector/blob/master/geojson/ne_110m_admin_0_countries.geojson ; terms https://www.naturalearthdata.com/about/terms-of-use/ . Coarse dataset for suggestions only, not authoritative jurisdiction boundaries.
+
+## Government-source content
+UK FCDO primary-service entries include public-sector information licensed under the Open Government Licence v3.0: https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ . Other government sources are attributed individually in HELPLINE_SOURCES.md.

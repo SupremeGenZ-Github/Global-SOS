@@ -1,0 +1,621 @@
+{
+  "reviewed_at": "2026-10-31",
+  "imported": [
+    {
+      "iso": "KZ",
+      "records": 4
+    },
+    {
+      "iso": "TZ",
+      "records": 1
+    },
+    {
+      "iso": "UA",
+      "records": 3
+    },
+    {
+      "iso": "KE",
+      "records": 1
+    },
+    {
+      "iso": "CO",
+      "records": 3
+    },
+    {
+      "iso": "NG",
+      "records": 1
+    },
+    {
+      "iso": "UG",
+      "records": 1
+    },
+    {
+      "iso": "CY",
+      "records": 1
+    },
+    {
+      "iso": "YE",
+      "records": 3
+    },
+    {
+      "iso": "JO",
+      "records": 1
+    },
+    {
+      "iso": "IQ",
+      "records": 3
+    },
+    {
+      "iso": "IL",
+      "records": 3
+    },
+    {
+      "iso": "PK",
+      "records": 2
+    },
+    {
+      "iso": "IR",
+      "records": 3
+    },
+    {
+      "iso": "SV",
+      "records": 2
+    },
+    {
+      "iso": "SC",
+      "records": 1
+    },
+    {
+      "iso": "MQ",
+      "records": 4
+    },
+    {
+      "iso": "NE",
+      "records": 3
+    },
+    {
+      "iso": "AZ",
+      "records": 3
+    },
+    {
+      "iso": "RE",
+      "records": 4
+    },
+    {
+      "iso": "GP",
+      "records": 4
+    },
+    {
+      "iso": "RS",
+      "records": 4
+    },
+    {
+      "iso": "VE",
+      "records": 1
+    },
+    {
+      "iso": "MW",
+      "records": 3
+    },
+    {
+      "iso": "MR",
+      "records": 3
+    },
+    {
+      "iso": "MU",
+      "records": 3
+    },
+    {
+      "iso": "BE",
+      "records": 1
+    },
+    {
+      "iso": "AL",
+      "records": 3
+    },
+    {
+      "iso": "SN",
+      "records": 3
+    },
+    {
+      "iso": "KH",
+      "records": 3
+    },
+    {
+      "iso": "ER",
+      "records": 3
+    },
+    {
+      "iso": "SB",
+      "records": 3
+    },
+    {
+      "iso": "PA",
+      "records": 4
+    },
+    {
+      "iso": "PE",
+      "records": 3
+    },
+    {
+      "iso": "CL",
+      "records": 3
+    },
+    {
+      "iso": "NC",
+      "records": 3
+    },
+    {
+      "iso": "DZ",
+      "records": 3
+    },
+    {
+      "iso": "SE",
+      "records": 1
+    },
+    {
+      "iso": "SI",
+      "records": 2
+    },
+    {
+      "iso": "SK",
+      "records": 3
+    },
+    {
+      "iso": "SM",
+      "records": 3
+    },
+    {
+      "iso": "RO",
+      "records": 1
+    },
+    {
+      "iso": "PT",
+      "records": 1
+    },
+    {
+      "iso": "PL",
+      "records": 3
+    },
+    {
+      "iso": "NO",
+      "records": 3
+    },
+    {
+      "iso": "MK",
+      "records": 2
+    },
+    {
+      "iso": "ME",
+      "records": 1
+    },
+    {
+      "iso": "MC",
+      "records": 1
+    },
+    {
+      "iso": "MD",
+      "records": 1
+    },
+    {
+      "iso": "MT",
+      "records": 1
+    },
+    {
+      "iso": "LU",
+      "records": 3
+    },
+    {
+      "iso": "LT",
+      "records": 1
+    },
+    {
+      "iso": "LI",
+      "records": 3
+    },
+    {
+      "iso": "LV",
+      "records": 3
+    },
+    {
+      "iso": "IE",
+      "records": 2
+    },
+    {
+      "iso": "IS",
+      "records": 1
+    },
+    {
+      "iso": "HU",
+      "records": 1
+    },
+    {
+      "iso": "GR",
+      "records": 1
+    },
+    {
+      "iso": "GI",
+      "records": 1
+    },
+    {
+      "iso": "GE",
+      "records": 1
+    },
+    {
+      "iso": "FI",
+      "records": 1
+    },
+    {
+      "iso": "EE",
+      "records": 1
+    },
+    {
+      "iso": "DK",
+      "records": 1
+    },
+    {
+      "iso": "CZ",
+      "records": 1
+    },
+    {
+      "iso": "HR",
+      "records": 1
+    },
+    {
+      "iso": "BG",
+      "records": 1
+    },
+    {
+      "iso": "BY",
+      "records": 3
+    },
+    {
+      "iso": "AM",
+      "records": 1
+    },
+    {
+      "iso": "AD",
+      "records": 4
+    },
+    {
+      "iso": "VN",
+      "records": 4
+    },
+    {
+      "iso": "VU",
+      "records": 3
+    },
+    {
+      "iso": "UZ",
+      "records": 3
+    },
+    {
+      "iso": "TV",
+      "records": 3
+    },
+    {
+      "iso": "TG",
+      "records": 3
+    },
+    {
+      "iso": "TL",
+      "records": 3
+    },
+    {
+      "iso": "TW",
+      "records": 3
+    },
+    {
+      "iso": "WS",
+      "records": 1
+    },
+    {
+      "iso": "PH",
+      "records": 1
+    },
+    {
+      "iso": "PG",
+      "records": 3
+    },
+    {
+      "iso": "PW",
+      "records": 1
+    },
+    {
+      "iso": "NR",
+      "records": 3
+    },
+    {
+      "iso": "MM",
+      "records": 3
+    },
+    {
+      "iso": "MN",
+      "records": 3
+    },
+    {
+      "iso": "LB",
+      "records": 3
+    },
+    {
+      "iso": "LY",
+      "records": 1
+    },
+    {
+      "iso": "MA",
+      "records": 3
+    },
+    {
+      "iso": "MH",
+      "records": 2
+    },
+    {
+      "iso": "MV",
+      "records": 3
+    },
+    {
+      "iso": "AW",
+      "records": 3
+    },
+    {
+      "iso": "BS",
+      "records": 1
+    },
+    {
+      "iso": "BB",
+      "records": 3
+    },
+    {
+      "iso": "BZ",
+      "records": 1
+    },
+    {
+      "iso": "LA",
+      "records": 3
+    },
+    {
+      "iso": "BM",
+      "records": 1
+    },
+    {
+      "iso": "KG",
+      "records": 4
+    },
+    {
+      "iso": "KI",
+      "records": 3
+    },
+    {
+      "iso": "KY",
+      "records": 1
+    },
+    {
+      "iso": "CR",
+      "records": 1
+    },
+    {
+      "iso": "CU",
+      "records": 3
+    },
+    {
+      "iso": "CW",
+      "records": 4
+    },
+    {
+      "iso": "DM",
+      "records": 1
+    },
+    {
+      "iso": "DO",
+      "records": 1
+    },
+    {
+      "iso": "GT",
+      "records": 2
+    },
+    {
+      "iso": "HT",
+      "records": 3
+    },
+    {
+      "iso": "HN",
+      "records": 1
+    },
+    {
+      "iso": "JM",
+      "records": 3
+    },
+    {
+      "iso": "NI",
+      "records": 1
+    },
+    {
+      "iso": "KN",
+      "records": 4
+    },
+    {
+      "iso": "LC",
+      "records": 1
+    },
+    {
+      "iso": "VC",
+      "records": 2
+    },
+    {
+      "iso": "AR",
+      "records": 3
+    },
+    {
+      "iso": "BO",
+      "records": 3
+    },
+    {
+      "iso": "EC",
+      "records": 1
+    },
+    {
+      "iso": "GY",
+      "records": 3
+    },
+    {
+      "iso": "PY",
+      "records": 3
+    },
+    {
+      "iso": "PF",
+      "records": 2
+    },
+    {
+      "iso": "FJ",
+      "records": 2
+    },
+    {
+      "iso": "SR",
+      "records": 3
+    },
+    {
+      "iso": "UY",
+      "records": 1
+    },
+    {
+      "iso": "AO",
+      "records": 3
+    },
+    {
+      "iso": "BJ",
+      "records": 2
+    },
+    {
+      "iso": "BW",
+      "records": 3
+    },
+    {
+      "iso": "BI",
+      "records": 1
+    },
+    {
+      "iso": "CM",
+      "records": 3
+    },
+    {
+      "iso": "CV",
+      "records": 3
+    },
+    {
+      "iso": "KM",
+      "records": 2
+    },
+    {
+      "iso": "CF",
+      "records": 3
+    },
+    {
+      "iso": "TD",
+      "records": 2
+    },
+    {
+      "iso": "CI",
+      "records": 3
+    },
+    {
+      "iso": "DJ",
+      "records": 3
+    },
+    {
+      "iso": "GQ",
+      "records": 2
+    },
+    {
+      "iso": "SZ",
+      "records": 3
+    },
+    {
+      "iso": "BN",
+      "records": 3
+    },
+    {
+      "iso": "BT",
+      "records": 3
+    },
+    {
+      "iso": "GA",
+      "records": 2
+    },
+    {
+      "iso": "GH",
+      "records": 1
+    },
+    {
+      "iso": "GW",
+      "records": 3
+    },
+    {
+      "iso": "AF",
+      "records": 1
+    },
+    {
+      "iso": "LS",
+      "records": 1
+    },
+    {
+      "iso": "LR",
+      "records": 1
+    },
+    {
+      "iso": "ML",
+      "records": 3
+    },
+    {
+      "iso": "MZ",
+      "records": 3
+    },
+    {
+      "iso": "NA",
+      "records": 1
+    },
+    {
+      "iso": "RW",
+      "records": 3
+    },
+    {
+      "iso": "ST",
+      "records": 3
+    },
+    {
+      "iso": "SL",
+      "records": 1
+    },
+    {
+      "iso": "SO",
+      "records": 3
+    },
+    {
+      "iso": "SD",
+      "records": 1
+    },
+    {
+      "iso": "ZM",
+      "records": 3
+    },
+    {
+      "iso": "ZW",
+      "records": 1
+    }
+  ],
+  "skipped": [
+    "ET",
+    "SY",
+    "CG",
+    "BF",
+    "TM",
+    "CD",
+    "TJ",
+    "GD",
+    "GM",
+    "GN",
+    "MG",
+    "SS",
+    "TN"
+  ],
+  "note": "Explicit primary-service lines reviewed; ambiguous and locally restricted narratives withheld from automatic extraction."
+}

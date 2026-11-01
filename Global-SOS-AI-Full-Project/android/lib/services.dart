@@ -38,13 +38,58 @@ const categoryIds = [
   'railway',
   'other',
 ];
+String? everydayReply(String text) {
+  final t = text.trim().toLowerCase();
+  if (isUrgent(t)) return null;
+  for (final row in assistantFAQ) {
+    if (RegExp(row['pattern'] as String, caseSensitive: false).hasMatch(t)) {
+      return row['answer'] as String;
+    }
+  }
+  final match = RegExp(
+    r'^(?:what is |calculate )?(-?\d+(?:\.\d+)?)\s*([+*/-])\s*(-?\d+(?:\.\d+)?)[? ]*$',
+  ).firstMatch(t);
+  if (match != null) {
+    final a = double.parse(match.group(1)!), b = double.parse(match.group(3)!);
+    final result = switch (match.group(2)) {
+      '+' => a + b,
+      '-' => a - b,
+      '*' => a * b,
+      '/' => b == 0 ? double.nan : a / b,
+      _ => double.nan,
+    };
+    return result.isFinite
+        ? 'The result is $result.'
+        : 'Division by zero is undefined.';
+  }
+  return null;
+}
+
+final List<Json> assistantFAQ =
+    (jsonDecode(r'''[
+ {"pattern":"^(hi|hello|hey|good morning|good evening)[! .]*$","answer":"Hello! I can help you find official emergency and specialist services. Select your current country, then describe the help you need. You can also ask how this app works."},
+ {"pattern":"^(thanks|thank you|thankyou)[! .]*$","answer":"You're welcome. You can save useful services as favorites and add trusted contacts in My Safety."},
+ {"pattern":"(who are you|what can you do|how.*app.*work|how to use)","answer":"I am the Global SOS AI assistant. I find source-checked helplines by country, situation and contact channel. The directory works offline. The optional local model helps classify requests; online AI needs your configured backend."},
+ {"pattern":"(what is your name|your name)","answer":"My name is Global SOS AI. I help you find appropriate official support services."},
+ {"pattern":"(offline|internet|network).*(work|need|require)|work.*offline","answer":"The bundled directory, favorites and basic routing work without internet. Download the optional local model once to use LLM intent routing offline. WhatsApp, email, websites, synchronization and server alerts require connectivity. Telephone calls depend on the mobile network."},
+ {"pattern":"(download|load|install).*model|model.*(download|load)","answer":"Open Settings, download the optional model, then tap Load model. The app checks its integrity first. If the model fails or is missing, the directory and fallback router remain available."},
+ {"pattern":"(sos|countdown).*(work|happen)|how.*sos","answer":"Tap or hold SOS to start a cancellable five-second countdown. It then opens the verified emergency number in the Android dialer; press Call there. Configured trusted-contact provider alerts are separate and report their real submission status."},
+ {"pattern":"(email|whatsapp|web).*(missing|available|find)|where.*(email|whatsapp)","answer":"Open All Helplines and choose the channel filter. Buttons appear only for contact methods published by an official government source. Not every service offers email, WhatsApp or web reporting. Those channels may be unsuitable for immediate emergencies."},
+ {"pattern":"(privacy|private|store my|save my|data safe)","answer":"Android trusted contacts and optional medical details are encrypted on this device. Offline chat is not sent to the server. Online routing sends your current message with your consent. Location uploads require consent and a private time-limited server session."},
+ {"pattern":"(trusted contact|add.*contact|contact.*alert)","answer":"Use My Safety to add a trusted person. You can call them or prepare SMS, WhatsApp and email messages. Automatic provider alerts additionally require their consent, permitted methods, your private server token and an operator-approved recipient."},
+ {"pattern":"(can you.*call|call.*automatically|automatic.*call)","answer":"This app opens the Android dialer with the emergency number after the SOS countdown. Android restricts direct emergency calling by ordinary apps, so press Call on the phone screen. Opening a dialer does not confirm connection."},
+ {"pattern":"(good night|bye|goodbye)[! .]*$","answer":"Take care. Your saved directory and favorites remain available offline."}
+]
+''')
+            as List)
+        .cast<Json>();
 String classify(String text) {
   final t = text.toLowerCase();
   final rules = <String, String>{
     'mental': r'suicid|self.harm|kill myself|end my life',
     'fire': r'fire|burning|smoke|flames|आग',
     'ambulance':
-        r'unconscious|not breathing|chest pain|bleeding|ambulance|heart attack|medical|injur',
+        r'unconscious|not breathing|can.t breathe|cannot breathe|choking|stabbed|chest pain|bleeding|ambulance|heart attack|medical|injur',
     'poison': r'poison|overdose',
     'domestic': r'domestic|abuse',
     'police': r'attack|robbe|police|danger|assault|gun|stalk|rape|पुलिस',
@@ -90,6 +135,7 @@ List<Json> selectRecords(
           (channel.isEmpty ||
               (r['channels'] as List).any((c) => c['kind'] == channel)) &&
           (region.isEmpty ||
+              r['region'] == null ||
               (r['region'] ?? r['city'] ?? '')
                   .toString()
                   .toLowerCase()
@@ -151,12 +197,23 @@ class DirectoryStore {
   Future<Json> load() async {
     final db = await database;
     final rows = await db.query('snapshot', where: 'id=1');
-    if (rows.isNotEmpty) {
-      return jsonDecode(rows.first['payload'] as String) as Json;
-    }
     final seed =
         jsonDecode(await rootBundle.loadString('assets/directory.json'))
             as Json;
+    if (rows.isNotEmpty) {
+      final saved = jsonDecode(rows.first['payload'] as String) as Json;
+      // Replace a previous bundled seed on app upgrade, but preserve an
+      // administrator-published synchronized snapshot and withdrawn records.
+      final savedBundle = saved['bundle_release'] as int? ?? 1;
+      final nextBundle = seed['bundle_release'] as int? ?? 1;
+      if (nextBundle <= savedBundle ||
+          saved['origin'] == 'server' ||
+          (saved['records'] as List).any(
+            (r) => r['verification_status'] == 'admin_approved',
+          )) {
+        return saved;
+      }
+    }
     await replace(seed);
     return seed;
   }
@@ -218,9 +275,11 @@ class Api {
     String method = 'GET',
     Json? body,
     String? capability,
+    String? alertToken,
   }) async {
     final request = http.Request(method, endpoint(path));
     request.headers['Content-Type'] = 'application/json';
+    if (alertToken != null) request.headers['X-Alert-Token'] = alertToken;
     if (capability != null) {
       request.headers['Authorization'] = 'Bearer $capability';
     }

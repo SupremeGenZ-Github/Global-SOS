@@ -6,6 +6,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'services.dart';
+import 'device_tools.dart';
+import 'safety_checklist.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,7 +20,9 @@ class GlobalSOS extends StatefulWidget {
     this.directoryLoader,
     this.safetyLoader,
     this.categoryLoader,
+    this.emergencyDialer,
   });
+  final Future<void> Function(String)? emergencyDialer;
   final Future<Json> Function()? directoryLoader;
   final Future<Json> Function()? safetyLoader;
   final Future<List<Json>> Function()? categoryLoader;
@@ -43,6 +47,8 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       channel = '',
       status = 'Loading offline directory…',
       chatMode = 'Offline rules (not an LLM)';
+  String regionFilter = '', voiceLanguage = 'en-IN';
+  bool favoritesOnly = false, silentMode = false;
   int page = 0;
   bool light = false,
       contrast = false,
@@ -59,6 +65,9 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
   int? countdown;
   StreamSubscription<Position>? locationStream;
   double? modelProgress;
+  List<Json> alertResults = [];
+  bool notifying = false;
+  bool addressConsent = false;
   Api get api => Api(serverInput.text.trim());
   @override
   void initState() {
@@ -70,7 +79,14 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
   Future<void> initialize() async {
     try {
       final d = await (widget.directoryLoader?.call() ?? store.load());
-      final s = await (widget.safetyLoader?.call() ?? vault.load());
+      Json s;
+      try {
+        s = await (widget.safetyLoader?.call() ?? vault.load());
+      } catch (_) {
+        s = {'contacts': <dynamic>[], 'history': <dynamic>[]};
+      }
+      s['contacts'] = s['contacts'] is List ? s['contacts'] : <dynamic>[];
+      s['history'] = s['history'] is List ? s['history'] : <dynamic>[];
       final p = await SharedPreferences.getInstance();
       final c =
           await (widget.categoryLoader?.call() ??
@@ -87,6 +103,9 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         favorites = p.getStringList('favorites') ?? [];
         light = p.getBool('light') ?? false;
         contrast = p.getBool('contrast') ?? false;
+        voiceLanguage = p.getString('voiceLanguage') ?? 'en-IN';
+        silentMode = p.getBool('silentMode') ?? false;
+        addressConsent = p.getBool('addressConsent') ?? false;
         serverInput.text =
             p.getString('server') ??
             const String.fromEnvironment('API_BASE_URL');
@@ -119,6 +138,8 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     }
     try {
       final d = await api.call('/directory');
+      d['origin'] = 'server';
+      d['bundle_release'] = directory?['bundle_release'] ?? 2;
       await store.replace(d);
       if (mounted) setState(() => directory = d);
       note('Directory synchronized · version ${d['version']}');
@@ -147,6 +168,54 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> contactService(Json channel) async {
+    if (channel['kind'] == 'phone' || channel['kind'] == 'web') {
+      await open(channelUri(channel));
+      return;
+    }
+    final userMessages = conversation.where((m) => m['user'] == true).toList();
+    final message = TextEditingController(
+      text: userMessages.isEmpty
+          ? 'I need assistance. Please let me know how to get help.'
+          : userMessages.last['text'].toString(),
+    );
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Prepare ${channel['kind']} message'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Recipient: ${channel['value']}\n${channel['notes'] ?? ''}\nReview your message. The external app requires you to send it.',
+              ),
+              TextField(
+                controller: message,
+                minLines: 3,
+                maxLines: 6,
+                maxLength: 1000,
+                decoration: const InputDecoration(labelText: 'Your message'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Open composer'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) await open(channelUri(channel, message: message.text));
+    message.dispose();
+  }
+
   bool confirmCountry() {
     if (country.isNotEmpty) return true;
     note('Confirm your current country first.');
@@ -154,8 +223,35 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     return false;
   }
 
+  String? get emergencyNumber {
+    final candidates = records
+        .where(
+          (r) =>
+              r['country'] == country &&
+              r['region'] == null &&
+              (r['categories'] as List).contains('police'),
+        )
+        .toList();
+    if (country == 'IN') return '112';
+    for (final r in candidates) {
+      for (final c in r['channels'] as List) {
+        if (c['kind'] == 'phone' && c['immediate'] == true) {
+          return c['value'].toString().replaceAll(RegExp(r'[^+0-9]'), '');
+        }
+      }
+    }
+    return null;
+  }
+
   void startCountdown() {
-    if (!confirmCountry()) return;
+    if (!confirmCountry() || countdown != null || active) return;
+    if (emergencyNumber == null) {
+      note(
+        'No verified emergency calling shortcut for this country. Use your phone emergency screen.',
+      );
+      return;
+    }
+    if (!silentMode) unawaited(HapticFeedback.heavyImpact());
     setState(() {
       page = 1;
       countdown = 5;
@@ -190,6 +286,21 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       'at': DateTime.now().toIso8601String(),
       'status': 'SOS started locally. No alerts sent.',
     });
+    // Launch the emergency dialer before storage, GPS or network work.
+    final number = emergencyNumber;
+    if (number != null) {
+      try {
+        await (widget.emergencyDialer?.call(number) ??
+            DeviceTools.dial(number));
+        note(
+          'Dialer opened with $number. Press Call on the phone screen. Connection not confirmed.',
+        );
+      } catch (_) {
+        note(
+          'Could not open the dialer. Use your phone emergency calling screen.',
+        );
+      }
+    }
     await saveSafety();
     if (serverInput.text.isNotEmpty) {
       try {
@@ -198,7 +309,10 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
           method: 'POST',
           body: {'country': country},
         );
-        if (mounted && active) setState(() => session = s);
+        if (mounted && active) {
+          setState(() => session = s);
+          if (safety['automaticAlerts'] == true) unawaited(notifyContacts());
+        }
       } catch (_) {
         note('Local SOS active. Server session unavailable. No alerts sent.');
       }
@@ -235,6 +349,141 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     } catch (_) {
       note(
         'Unable to determine location. Manual country selection remains available.',
+      );
+    }
+  }
+
+  String get alertMessage =>
+      'I activated Global SOS AI and need help. Please contact me.'
+      '${locationConsent && position != null ? ' Location: https://maps.google.com/?q=${position!.latitude},${position!.longitude}' : ''}'
+      '${sharing ? ' Private session: $privateLink' : ''}';
+
+  Future<void> notifyContacts() async {
+    if (session == null || notifying) return;
+    final contacts = <Json>[];
+    for (final c in safety['contacts'] as List) {
+      if (c['alertConsent'] != true) continue;
+      for (final method in (c['methods'] as List? ?? ['sms'])) {
+        final recipient = method == 'email' ? c['email'] : c['phone'];
+        if (recipient != null && recipient.toString().isNotEmpty) {
+          contacts.add({'kind': method, 'recipient': recipient});
+        }
+      }
+    }
+    if (contacts.isEmpty) {
+      note(
+        'Add a trusted contact and enable its permitted alert methods first.',
+      );
+      return;
+    }
+    setState(() => notifying = true);
+    try {
+      final response = await api.call(
+        '/sos/${session!['id']}/notify',
+        method: 'POST',
+        capability: session!['capability'],
+        alertToken: safety['alertToken']?.toString(),
+        body: {
+          'consent': true,
+          'contacts': contacts.take(10).toList(),
+          'message': alertMessage,
+        },
+      );
+      if (mounted) {
+        setState(
+          () => alertResults = (response['results'] as List).cast<Json>(),
+        );
+      }
+    } catch (_) {
+      note(
+        'Provider alerts unavailable. Use the trusted-contact SMS, WhatsApp or email buttons. No delivery confirmed.',
+      );
+    } finally {
+      if (mounted) setState(() => notifying = false);
+    }
+  }
+
+  Future<void> refreshAlerts() async {
+    if (session == null) return;
+    try {
+      final r = await api.call(
+        '/sos/${session!['id']}/notifications',
+        capability: session!['capability'],
+      );
+      if (mounted) {
+        setState(() => alertResults = (r['results'] as List).cast<Json>());
+      }
+    } catch (_) {
+      note('Could not refresh provider status. Last reported state retained.');
+    }
+  }
+
+  Future<void> detectCountry() async {
+    await locate();
+    if (position == null || !mounted) return;
+    final p = position!;
+    try {
+      final guess = await CountryLookup.suggest(
+        p.latitude,
+        p.longitude,
+        p.accuracy,
+      );
+      final codes = (guess['countries'] as List).cast<String>();
+      Json? address;
+      try {
+        if (addressConsent) {
+          address = await DeviceTools.address(
+            p.latitude,
+            p.longitude,
+          ).timeout(const Duration(seconds: 5));
+        }
+      } catch (_) {}
+      if (!mounted) return;
+      final suggested = codes.length == 1
+          ? codes.first
+          : address?['country']?.toString();
+      if (suggested == null ||
+          !((directory?['countries'] as List?) ?? []).any(
+            (c) => c['code'] == suggested,
+          )) {
+        note(
+          'Location uncertain or outside coarse map coverage. Confirm your country manually.',
+        );
+        return;
+      }
+      final mismatch =
+          address?['country'] != null && address!['country'] != suggested;
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Confirm your location'),
+          content: Text(
+            'Suggested country: $suggested\nRegion: ${address?["region"] ?? "not available"}\nCity: ${address?["city"] ?? "not available"}\n${guess["uncertain"] == true || mismatch ? "Border/coastal or location uncertainty: check carefully." : "Coarse offline map suggestion."}',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Select manually'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Confirm country'),
+            ),
+          ],
+        ),
+      );
+      if (ok == true && mounted) {
+        setState(() {
+          country = suggested;
+          regionFilter = address?['region']?.toString() ?? '';
+          conversation = [];
+        });
+        await prefs?.setString('country', country);
+        note('Country confirmed. You can change it in Settings.');
+      }
+    } catch (_) {
+      note(
+        'Country detection unavailable. Select your current country manually.',
       );
     }
   }
@@ -338,7 +587,21 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
 
   Future<void> sendChat() async {
     final text = chatInput.text.trim();
-    if (text.isEmpty || busy || !confirmCountry()) return;
+    if (text.isEmpty || busy) return;
+    final everyday = everydayReply(text);
+    if (everyday != null) {
+      chatInput.clear();
+      setState(() {
+        conversation.add({'text': text, 'user': true});
+        conversation.add({
+          'text': everyday,
+          'mode': 'Offline app guide / calculator',
+          'records': <Json>[],
+        });
+      });
+      return;
+    }
+    if (!confirmCountry()) return;
     chatInput.clear();
     setState(() {
       busy = true;
@@ -361,7 +624,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         mode = data['mode'];
         if (data['ai_error'] != null) answer = '$answer ${data['ai_error']}';
       } else {
-        if (intent == 'other' && model.loaded) {
+        if (intent == 'other' && model.loaded && !isUrgent(text)) {
           final guessed = await model.intent(text);
           if (guessed != null) {
             intent = guessed;
@@ -374,7 +637,10 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
           category: intent == 'other' ? '' : intent,
           nationalOnly: true,
         );
-        if (isUrgent(text) && !selected.any((r) => (r['channels'] as List).any((c) => c['immediate'] == true))) {
+        if (isUrgent(text) &&
+            !selected.any(
+              (r) => (r['channels'] as List).any((c) => c['immediate'] == true),
+            )) {
           final immediate = records
               .where(
                 (r) =>
@@ -385,7 +651,10 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
                     ),
               )
               .toList();
-          selected = [...immediate, ...selected.where((r) => !immediate.any((i) => i['id'] == r['id']))];
+          selected = [
+            ...immediate,
+            ...selected.where((r) => !immediate.any((i) => i['id'] == r['id'])),
+          ];
         }
       }
     } catch (_) {
@@ -398,12 +667,35 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       );
       answer = 'Online routing unavailable. Use the saved contacts below.';
     }
+    if (isUrgent(text) && mode.startsWith('Offline')) {
+      if (intent == 'other') selected = [];
+      if (!selected.any(
+        (r) => (r['channels'] as List).any((c) => c['immediate'] == true),
+      )) {
+        final immediate = records
+            .where(
+              (r) =>
+                  r['country'] == country &&
+                  r['region'] == null &&
+                  (r['categories'] as List).any(
+                    (c) => ['police', 'ambulance', 'fire'].contains(c),
+                  ) &&
+                  (r['channels'] as List).any((c) => c['immediate'] == true),
+            )
+            .toList();
+        selected = [
+          ...immediate,
+          ...selected.where((r) => !immediate.any((i) => i['id'] == r['id'])),
+        ];
+      }
+    }
     if (!mounted) return;
     setState(() {
       chatMode = mode;
       conversation.add({
         'text': selected.isEmpty
-            ? 'Official helpline information not yet verified for this country and category. Confirm your country. If danger is immediate, use your phone’s emergency calling screen or seek nearby help.'
+            ? answer ??
+                  'Official helpline information not yet verified for this country and category. Confirm your country. If danger is immediate, use your phone’s emergency calling screen or seek nearby help.'
             : answer ??
                   (isUrgent(text)
                       ? 'If you are in immediate danger, choose a suitable emergency contact below now.'
@@ -416,7 +708,9 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
   }
 
   Future<void> addContact() async {
-    final name = TextEditingController(), phone = TextEditingController();
+    final name = TextEditingController(),
+        phone = TextEditingController(),
+        email = TextEditingController();
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -435,6 +729,11 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
               decoration: const InputDecoration(
                 labelText: 'Phone with country code',
               ),
+            ),
+            TextField(
+              controller: email,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(labelText: 'Email (optional)'),
             ),
           ],
         ),
@@ -461,12 +760,16 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         'id': DateTime.now().microsecondsSinceEpoch.toString(),
         'name': name.text.trim(),
         'phone': phone.text,
+        'email': email.text.trim(),
+        'alertConsent': false,
+        'methods': <String>[],
       });
       await saveSafety();
       if (mounted) setState(() {});
     }
     name.dispose();
     phone.dispose();
+    email.dispose();
   }
 
   Widget helpline(Json r) {
@@ -514,7 +817,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
             ),
             const SizedBox(height: 8),
             Text(
-              '${r['city'] ?? r['region'] ?? country} · ${r['jurisdiction']}',
+              '${r['city'] ?? r['region'] ?? r['country']} · ${r['jurisdiction']}',
               style: const TextStyle(fontSize: 12),
             ),
             const SizedBox(height: 15),
@@ -524,13 +827,31 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
               children: cs
                   .map(
                     (c) => FilledButton.tonal(
-                      onPressed: () => unawaited(open(channelUri(c))),
+                      onPressed: () => unawaited(contactService(c)),
                       child: Text(
                         '${c['kind'].toString().toUpperCase()}  ${c['value']}',
                       ),
                     ),
                   )
                   .toList(),
+            ),
+            ...cs
+                .where((c) => c['notes'] != null)
+                .map(
+                  (c) => Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      '${c['kind'].toString().toUpperCase()}: ${c['notes']}',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ),
+            const SizedBox(height: 8),
+            Text(
+              cs.any((c) => c['immediate'] == true)
+                  ? 'Has an emergency channel. Read channel restrictions.'
+                  : 'Support / reporting service. For immediate danger, use SOS.',
+              style: const TextStyle(fontSize: 12),
             ),
             ExpansionTile(
               tilePadding: EdgeInsets.zero,
@@ -598,32 +919,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         child: GestureDetector(
           onLongPress: startCountdown,
           child: ElevatedButton(
-            onPressed: () {
-              if (confirmCountry()) {
-                showDialog<void>(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text('Start SOS countdown?'),
-                    content: const Text(
-                      'This does not dispatch emergency services or send alerts automatically.',
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        child: const Text('Cancel'),
-                      ),
-                      FilledButton(
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          startCountdown();
-                        },
-                        child: const Text('Start countdown'),
-                      ),
-                    ],
-                  ),
-                );
-              }
-            },
+            onPressed: startCountdown,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xffe34e4e),
               foregroundColor: Colors.white,
@@ -645,7 +941,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
                   ),
                 ),
                 Text(
-                  'HOLD TO ACTIVATE',
+                  'TAP OR HOLD',
                   style: TextStyle(fontSize: 8, letterSpacing: 1.5),
                 ),
               ],
@@ -755,8 +1051,13 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     heading(
       'YOU STAY IN CONTROL',
       'Emergency controls',
-      'No automatic public emergency dispatch. No silent messages.',
+      'After five seconds, opens the verified emergency number in your phone dialer. Press Call there. Cancel below to stop.',
     ),
+    if (emergencyNumber != null)
+      Text(
+        'Emergency shortcut: $emergencyNumber',
+        style: const TextStyle(fontSize: 24),
+      ),
     if (countdown != null)
       Card(
         child: Padding(
@@ -764,7 +1065,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
           child: Column(
             children: [
               Text(
-                'Starting in $countdown',
+                'Opening dialer in $countdown',
                 style: const TextStyle(fontSize: 32),
               ),
               const SizedBox(height: 15),
@@ -782,11 +1083,29 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     else if (!active)
       sosButton()
     else ...[
-      const Text('SOS active · No alerts sent', style: TextStyle(fontSize: 24)),
+      const Text('SOS session active', style: TextStyle(fontSize: 24)),
       Text(
         session == null
             ? 'Local safety session only.'
             : 'Private server session available for one hour.',
+      ),
+      FilledButton(
+        onPressed: session == null || notifying ? null : notifyContacts,
+        child: Text(
+          notifying
+              ? 'Submitting alerts...'
+              : 'Notify permitted trusted contacts',
+        ),
+      ),
+      if (alertResults.isNotEmpty)
+        OutlinedButton(
+          onPressed: refreshAlerts,
+          child: const Text('Refresh provider delivery status'),
+        ),
+      ...alertResults.map(
+        (r) => Text(
+          '${r["kind"]}: ${r["recipient"] ?? "trusted recipient"} — ${r["status"]}. Accepted/queued does not mean delivered.',
+        ),
       ),
       const SizedBox(height: 12),
       OutlinedButton(
@@ -852,27 +1171,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         .map(helpline),
     const SizedBox(height: 20),
     const Text('Trusted contacts', style: TextStyle(fontSize: 21)),
-    ...(safety['contacts'] as List).map(
-      (c) => Card(
-        child: ListTile(
-          title: Text(c['name']),
-          subtitle: const Text(
-            'Review and send yourself. No delivery confirmation.',
-          ),
-          trailing: IconButton(
-            tooltip: 'Open SMS composer',
-            icon: const Icon(Icons.sms_outlined),
-            onPressed: () => open(
-              channelUri(
-                {'kind': 'sms', 'value': c['phone']},
-                message:
-                    'I need help. Please contact me.${position != null ? ' My location: https://maps.google.com/?q=${position!.latitude},${position!.longitude}' : ''}${sharing ? ' Private session: $privateLink' : ''}',
-              ),
-            ),
-          ),
-        ),
-      ),
-    ),
+    ...(safety['contacts'] as List).cast<Json>().map((c) => trustedContact(c)),
   ];
   List<Widget> chat() => [
     heading(
@@ -925,6 +1224,23 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
                   color: m['user'] == true ? Colors.white : null,
                 ),
               ),
+              if (m['user'] != true && !silentMode)
+                TextButton.icon(
+                  icon: const Icon(Icons.volume_up),
+                  label: const Text('Read aloud'),
+                  onPressed: () async {
+                    try {
+                      await DeviceTools.speak(
+                        m['text'].toString(),
+                        voiceLanguage,
+                      );
+                    } catch (_) {
+                      note(
+                        'Speech unavailable for this language. Install its Android voice data.',
+                      );
+                    }
+                  },
+                ),
               ...((m['records'] as List?) ?? [])
                   .cast<Json>()
                   .take(6)
@@ -935,6 +1251,23 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       ),
     ),
     if (busy) const LinearProgressIndicator(),
+    OutlinedButton.icon(
+      icon: const Icon(Icons.mic),
+      label: const Text('Voice input'),
+      onPressed: () async {
+        try {
+          note(
+            'Android speech service opens next. Offline recognition is preferred; its own network and privacy settings apply.',
+          );
+          final text = await DeviceTools.listen(voiceLanguage);
+          if (text != null) chatInput.text = text;
+        } catch (_) {
+          note(
+            'Voice input unavailable. Install a speech recognition service or type your message.',
+          );
+        }
+      },
+    ),
     TextField(
       controller: chatInput,
       maxLength: 2000,
@@ -958,7 +1291,8 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       category: category,
       query: query,
       channel: channel,
-    );
+      region: regionFilter,
+    ).where((r) => !favoritesOnly || favorites.contains(r['id'])).toList();
     return [
       heading(
         'OFFICIAL SOURCES. CLEAR CHOICES.',
@@ -1018,9 +1352,118 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
               : 'Official helpline information not yet verified.',
           style: const TextStyle(fontSize: 22),
         ),
+      TextField(
+        decoration: const InputDecoration(
+          labelText: 'State / region / city',
+          border: OutlineInputBorder(),
+        ),
+        onChanged: (v) => setState(() => regionFilter = v),
+      ),
+      SwitchListTile(
+        title: const Text('Favorites only'),
+        value: favoritesOnly,
+        onChanged: (v) => setState(() => favoritesOnly = v),
+      ),
+      Text(
+        '${filtered.length} services match. Channels appear only when officially published.',
+      ),
       ...filtered.map(helpline),
     ];
   }
+
+  Widget trustedContact(Json c, {bool controls = false}) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(c['name'].toString(), style: const TextStyle(fontSize: 20)),
+          Text(c['phone'].toString()),
+          Wrap(
+            spacing: 8,
+            children: [
+              TextButton(
+                onPressed: () =>
+                    open(channelUri({'kind': 'phone', 'value': c['phone']})),
+                child: const Text('Call'),
+              ),
+              TextButton(
+                onPressed: () => open(
+                  channelUri({
+                    'kind': 'sms',
+                    'value': c['phone'],
+                  }, message: alertMessage),
+                ),
+                child: const Text('SMS'),
+              ),
+              TextButton(
+                onPressed: () => open(
+                  channelUri({
+                    'kind': 'whatsapp',
+                    'value': c['phone'],
+                  }, message: alertMessage),
+                ),
+                child: const Text('WhatsApp'),
+              ),
+              if ((c['email'] ?? '').toString().isNotEmpty)
+                TextButton(
+                  onPressed: () => open(
+                    channelUri({
+                      'kind': 'email',
+                      'value': c['email'],
+                    }, message: alertMessage),
+                  ),
+                  child: const Text('Email'),
+                ),
+            ],
+          ),
+          if (controls) ...[
+            SwitchListTile(
+              title: const Text('This person agreed to receive SOS alerts'),
+              value: c['alertConsent'] == true,
+              onChanged: (v) {
+                setState(() => c['alertConsent'] = v);
+                unawaited(saveSafety());
+              },
+            ),
+            Wrap(
+              children: ['sms', 'whatsapp', 'email']
+                  .map(
+                    (method) => FilterChip(
+                      label: Text('Allow $method'),
+                      selected: (c['methods'] as List? ?? []).contains(method),
+                      onSelected: c['alertConsent'] != true
+                          ? null
+                          : (v) {
+                              setState(() {
+                                final methods = List<String>.from(
+                                  c['methods'] as List? ?? [],
+                                );
+                                if (v) {
+                                  methods.add(method);
+                                } else {
+                                  methods.remove(method);
+                                }
+                                c['methods'] = methods;
+                              });
+                              unawaited(saveSafety());
+                            },
+                    ),
+                  )
+                  .toList(),
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() => (safety['contacts'] as List).remove(c));
+                unawaited(saveSafety());
+              },
+              child: const Text('Remove contact'),
+            ),
+          ],
+        ],
+      ),
+    ),
+  );
 
   List<Widget> safetyPage() => [
     heading(
@@ -1033,26 +1476,59 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       icon: const Icon(Icons.person_add_outlined),
       label: const Text('Add trusted contact'),
     ),
-    ...(safety['contacts'] as List).map(
-      (c) => Card(
-        child: ListTile(
-          title: Text(c['name']),
-          subtitle: Text(c['phone']),
-          trailing: IconButton(
-            tooltip: 'Remove contact',
-            icon: const Icon(Icons.delete_outline),
-            onPressed: () {
-              setState(() => (safety['contacts'] as List).remove(c));
-              unawaited(saveSafety());
-            },
-          ),
-        ),
+    ...(safety['contacts'] as List).cast<Json>().map(
+      (c) => trustedContact(c, controls: true),
+    ),
+    const SizedBox(height: 20),
+    TextFormField(
+      initialValue: safety['medical']?.toString() ?? '',
+      maxLines: 3,
+      maxLength: 1000,
+      decoration: const InputDecoration(
+        labelText: 'Optional medical details (encrypted, on this device)',
+        border: OutlineInputBorder(),
       ),
+      onChanged: (v) {
+        safety['medical'] = v;
+        unawaited(saveSafety());
+      },
+    ),
+    const SizedBox(height: 20),
+    SafetyChecklist(
+      checked: Map<String, dynamic>.from(safety['checklist'] as Map? ?? {}),
+      onChanged: (v) {
+        setState(() => safety['checklist'] = v);
+        unawaited(saveSafety());
+      },
     ),
     const SizedBox(height: 20),
     const Text('Favorite services', style: TextStyle(fontSize: 22)),
     ...records.where((r) => favorites.contains(r['id'])).map(helpline),
     const SizedBox(height: 20),
+    SwitchListTile(
+      title: const Text(
+        'Automatically alert permitted trusted contacts after SOS',
+      ),
+      subtitle: const Text(
+        'Requires your HTTPS backend, PostgreSQL, private alert token, approved recipients and configured messaging providers. Never contacts public helplines automatically.',
+      ),
+      value: safety['automaticAlerts'] == true,
+      onChanged: (v) {
+        setState(() => safety['automaticAlerts'] = v);
+        unawaited(saveSafety());
+      },
+    ),
+    TextFormField(
+      initialValue: safety['alertToken']?.toString() ?? '',
+      obscureText: true,
+      decoration: const InputDecoration(
+        labelText: 'Private provider-alert token (encrypted on device)',
+      ),
+      onChanged: (v) {
+        safety['alertToken'] = v;
+        unawaited(saveSafety());
+      },
+    ),
     const Text('Session history', style: TextStyle(fontSize: 22)),
     ...(safety['history'] as List)
         .take(30)
@@ -1115,7 +1591,61 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       },
     ),
     const SizedBox(height: 20),
+    DropdownButtonFormField<String>(
+      initialValue: voiceLanguage,
+      decoration: const InputDecoration(labelText: 'Preferred voice language'),
+      items: const [
+        DropdownMenuItem(value: 'en-IN', child: Text('English')),
+        DropdownMenuItem(value: 'ta-IN', child: Text('Tamil')),
+        DropdownMenuItem(value: 'te-IN', child: Text('Telugu')),
+        DropdownMenuItem(value: 'hi-IN', child: Text('Hindi')),
+      ],
+      onChanged: (v) {
+        setState(() => voiceLanguage = v ?? 'en-IN');
+        unawaited(prefs?.setString('voiceLanguage', voiceLanguage));
+      },
+    ),
+    SwitchListTile(
+      title: const Text('Silent interface'),
+      subtitle: const Text(
+        'Disables app haptics and read-aloud controls. Phone and external apps keep their own sound settings.',
+      ),
+      value: silentMode,
+      onChanged: (v) {
+        setState(() => silentMode = v);
+        unawaited(prefs?.setBool('silentMode', v));
+      },
+    ),
+    OutlinedButton.icon(
+      icon: const Icon(Icons.my_location),
+      label: const Text('Detect my country / region'),
+      onPressed: active || countdown != null ? null : detectCountry,
+    ),
+    SwitchListTile(
+      title: const Text('Allow Android address lookup'),
+      subtitle: const Text(
+        'Optional: Android geocoding may send GPS coordinates to its provider to obtain state/city. Disabled uses coarse offline country polygons only.',
+      ),
+      value: addressConsent,
+      onChanged: (v) {
+        setState(() => addressConsent = v);
+        unawaited(prefs?.setBool('addressConsent', v));
+      },
+    ),
     const Text('Website & backend', style: TextStyle(fontSize: 23)),
+    OutlinedButton.icon(
+      icon: const Icon(Icons.download_outlined),
+      label: const Text('Open website APK download page'),
+      onPressed: () async {
+        final base = serverInput.text.trim().replaceAll(RegExp(r'/+$'), '');
+        final uri = Uri.tryParse(base);
+        if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
+          note('Enter your HTTPS website/backend URL first.');
+          return;
+        }
+        await open(Uri.parse('$base/download'));
+      },
+    ),
     TextField(
       controller: serverInput,
       keyboardType: TextInputType.url,
@@ -1195,7 +1725,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     const SizedBox(height: 24),
     const Text('Privacy & limitations', style: TextStyle(fontSize: 23)),
     const Text(
-      'Calls, SMS, WhatsApp and email open external applications; you must complete each action. No message is silently sent.\n\nLocation sharing requires consent and a private server session. Links expire after one hour. Mark Safe or Cancel removes stored positions. Sharing stops when the app leaves the foreground.\n\nNo medical diagnosis, guaranteed response, automatic country lookup, background tracking or automatic emergency dispatch. Online routing requires your own configured server. Government webpage checks do not certify live availability.\n\nThe model identifies intent only. Untrusted model text is never displayed as contact information.',
+      'Public-service calls, SMS, WhatsApp and email open external applications; complete each action there. Optional provider alerts notify only consenting trusted contacts you explicitly enable, with a configured private backend.\n\nLocation sharing requires consent and a private server session. Links expire after one hour. Mark Safe or Cancel removes stored positions. Sharing stops when the app leaves the foreground.\n\nCountry detection gives a coarse offline suggestion and optional Android address lookup; confirm it yourself. No medical diagnosis, guaranteed response, background tracking or automatic emergency dispatch. Online routing requires your own configured server. Government webpage checks do not certify live availability.\n\nThe model identifies intent only. Untrusted model text is never displayed as contact information.',
       style: TextStyle(height: 1.7),
     ),
     OutlinedButton(
@@ -1283,6 +1813,10 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
               ],
             ),
             actions: [
+              TextButton(
+                onPressed: () => setState(() => page = 5),
+                child: Text(country.isEmpty ? 'Country' : country),
+              ),
               IconButton(
                 tooltip: 'Synchronize directory',
                 icon: const Icon(Icons.sync),

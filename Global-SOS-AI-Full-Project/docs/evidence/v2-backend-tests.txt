@@ -1,0 +1,30 @@
+
+> global-sos-ai@0.3.0 test
+> node --test tests/*.test.mjs
+
+✔ public APK metadata, binary, HEAD/range and checksum agree without authentication (126.5394ms)
+✔ missing or corrupt release never produces an enabled binary download (40.3538ms)
+✔ release parts assemble exactly and a corrupted update preserves the previous download (25.5533ms)
+✔ provider alerts require a private token, approved recipients, and preserve queued/delivery status without duplicate submission (3408.4882ms)
+✔ unconfigured and ambiguous provider outcomes never report delivery (2812.2381ms)
+✔ country registry and sourced channels are internally consistent (3227.2817ms)
+✔ health, readiness, unknown API, country validation and CORS (54.0169ms)
+✔ filtering cannot leak a different country and handles empty coverage (37.0149ms)
+✔ chat rejects injected model details and never changes country (87.1845ms)
+✔ online provider failure degrades without publishing generated contacts (21.0543ms)
+✔ private SOS requires capability and erases positions on Mark Safe (51.9159ms)
+✔ expired session cannot be read (9.3389ms)
+✔ administrator permissions, two-role approval, revision conflict, history and idempotent seed (1302.3936ms)
+✔ source monitor honors robots and does not silently publish contacts (22.5119ms)
+✔ directory version sync and read-only operation without database (48.15ms)
+✔ chat rate limit returns explicit status (58.951ms)
+✔ reviewed withdrawal removes a record from synchronization and survives reseeding (1229.9669ms)
+✔ urgent specialist requests prioritize immediate national services (8.296ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 18
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9978.3987

@@ -1,0 +1,4 @@
+Formatted lib\main.dart
+Formatted lib\safety_checklist.dart
+Formatted test\checklist_test.dart
+Formatted 7 files (3 changed) in 0.21 seconds.

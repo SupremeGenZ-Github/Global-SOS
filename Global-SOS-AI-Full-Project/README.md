@@ -1,13 +1,23 @@
-# Global SOS AI — v0.1.0
+# Global SOS AI — v0.3.0
 
 One Tap. One Conversation. Help Anywhere.
 
 This is a development release of a connected Flutter Android app, React/TypeScript website and Express/PostgreSQL API. **It is not certified for emergency dispatch or production reliance.** The directory works without an AI key. Calling and message buttons open external apps; they do not confirm connection or delivery.
 
+## New in 0.3
+
+The website now has a public **/download** page and serves the actual APK without a ChatGPT login. The full and Render ZIPs include checked Android release parts; build/start reconstructs and validates the download automatically. Keep the releases/android directory when uploading the source to GitHub. No database or API key is required for downloads.
+
+Personal readiness checklists are available on Android and the website. The website also adds printable emergency cards, contact editing, favorites-only filtering, sorting and setup diagnostics. See [the 0.3 upgrade guide](docs/UPGRADE-v0.3.md).
+
+## Upgrade from 0.1
+
+Read [the upgrade and provider configuration guide](docs/UPGRADE-v0.2.md). The SOS button now opens the native emergency dialer after five seconds. New source-checked specialist contacts, messaging channels, regional filtering, voice controls and country suggestions are included. See [the complete feature status](docs/FEATURE_STATUS.md) for implementation and device-validation boundaries.
+
 ## What is implemented
 
 - Government-page sourced directory bundled into Android; SQLite stores approved synchronized snapshots atomically. All 193 UN member states are selectable, with extra territories. A country entry does not imply verified contact coverage.
-- Telephone, SMS and officially published WhatsApp links. Email/web channel types are implemented; no unverified addresses are seeded.
+- Telephone, SMS and officially published WhatsApp links. Email and web channels are seeded where government sources publish them.
 - Search/category/channel filtering, favorites, country confirmation and accessible navigation.
 - Offline rules plus optional real llama.cpp model inference on ARM64 Android. The model performs **intent classification**, not medical advice or a general conversational tutor. Inference output is reduced to an allowed category; model-generated contacts are never displayed.
 - Optional server-side OpenAI-compatible model routing, consent switch, timeouts, rate limits and local fallback.

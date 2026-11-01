@@ -1,0 +1,33 @@
+{
+  "version": "0.2.0",
+  "apk": {
+    "file": "Global-SOS-AI.apk",
+    "version": "0.2.0",
+    "size_bytes": 29299963,
+    "sha256": "968cd92d34681e65498146495f6d4abb1cc5e0dd0069722a6efdb105350f6c5a",
+    "signing": "development/test key",
+    "signature_verified": true,
+    "device_installation_tested": false
+  },
+  "aab": {
+    "file": "Global-SOS-AI.aab",
+    "size_bytes": 24924954,
+    "sha256": "f016b884539629a41f9143428ee7a74300ddf344f7f8dd6ef0b5e02941390229",
+    "signature_verified": true,
+    "signing": "development/test key",
+    "device_installation_tested": false
+  },
+  "directory": {
+    "services": 525,
+    "channels": {
+      "phone": 548,
+      "sms": 12,
+      "whatsapp": 9,
+      "web": 40,
+      "email": 16
+    },
+    "countriesWithRecords": 197,
+    "unMembersWithRecords": 186,
+    "nationalPrimaryCountries": 184
+  }
+}

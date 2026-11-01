@@ -17,3 +17,8 @@ Opening phone/SMS/WhatsApp/email/maps links transfers the selected content to th
 Operational admin audit records retain action, role, target and time. They do not store user chats or coordinates. Directory approval history and source provenance are retained for safety accountability. Operators must define administrative retention, backup deletion procedures and legally required disclosures.
 
 The system is not a substitute for direct emergency services. Children and vulnerable users should use safety features with appropriate trusted support. No advertising or analytics integration is included by this project; hosting providers may collect technical metadata under their own terms.
+
+## Optional provider alerts and device services
+When explicitly enabled, trusted-contact recipient addresses and the user-selected alert message are sent through the configured backend to Twilio (SMS/WhatsApp) or Resend (email). Only operator-allowlisted recipients are accepted. Location appears only after location consent and capture/sharing; medical notes are not automatically attached. Provider retention and legal terms must be reviewed by the operator. Server receipts retain recipient hashes, provider IDs and statuses, and are deleted with expired sessions.
+
+Optional Android address lookup may send coordinates to the installed geocoding provider; it is off by default. Android speech recognition prefers offline mode but follows the recognition provider's own privacy/network settings. These services must be reviewed on the actual device.

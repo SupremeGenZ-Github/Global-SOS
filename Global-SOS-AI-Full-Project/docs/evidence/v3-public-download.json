@@ -1,0 +1,10 @@
+{
+  "version": "0.3.0",
+  "page_status": 200,
+  "apk_status": 200,
+  "bytes": 29299967,
+  "sha256": "bd84a53d10395d03b54a9dd73b82b3d0a94c8849eaedeb8e5aefe50711ea6d05",
+  "hash_matches": true,
+  "authentication_required": false,
+  "browser_interaction_tested": false
+}

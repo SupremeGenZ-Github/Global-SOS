@@ -24,3 +24,30 @@ plugins {
 }
 
 include(":app")
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+    repositories {
+        google {
+            content {
+                includeGroupByRegex("androidx[.].*")
+                includeGroupByRegex("com[.]android.*")
+                includeGroupByRegex("com[.]google[.]android.*")
+                includeGroup("com.google.testing.platform")
+            }
+        }
+        mavenCentral {
+            content {
+                excludeGroupByRegex("androidx[.].*")
+                excludeGroupByRegex("com[.]android.*")
+                excludeGroupByRegex("com[.]google[.]android.*")
+                excludeGroup("com.google.testing.platform")
+                excludeGroup("io.flutter")
+            }
+        }
+        maven {
+            url = uri("https://storage.googleapis.com/download.flutter.io")
+            content { includeGroup("io.flutter") }
+        }
+    }
+}
