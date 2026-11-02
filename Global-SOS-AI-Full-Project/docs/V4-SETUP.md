@@ -82,7 +82,7 @@ and per-user messaging credentials are not implemented.
 Enable the contact's consent and methods, then enable automatic alerts.
 Only exact allowlisted recipients are accepted. Existing server idempotency prevents a
 repeated session/recipient/method submission. Device SMS recipients are excluded from the
-automatic server SMS attempt when Android accepted the device submission.
+automatic server SMS attempt once an Android device submission was attempted, including uncertain failures (no automatic cross-route retry).
 Manual resubmission after an uncertain device result can duplicate messages; check results first.
 Use the status refresh button to obtain actual provider states.
 Queued/accepted/sent must never be interpreted as delivered.

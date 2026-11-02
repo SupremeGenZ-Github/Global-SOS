@@ -332,7 +332,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     if (widget.emergencyDialer == null) unawaited(completeSOSAlerts(generation));
     (safety['history'] as List).insert(0, {
       'at': DateTime.now().toIso8601String(),
-      'status': 'SOS started locally. No alerts sent.',
+      'status': 'SOS started. Call connection and alert delivery unconfirmed.',
     });
     // Launch the emergency dialer before storage, GPS or network work.
     final number = emergencyNumber;
@@ -362,12 +362,13 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         if (!active || generation != sosGeneration) return;
         if (c['alertConsent'] != true || !(c['methods'] as List? ?? []).contains('sms')) continue;
         final recipient = c['phone'].toString().replaceAll(RegExp(r'[^+0-9]'), '');
+        if (handledSms.contains(recipient)) continue;
+        handledSms.add(recipient);
         try {
           await DeviceTools.sendSms(recipient, alertMessage);
-          handledSms.add(recipient);
           if (mounted) setState(() => alertResults.add({'kind':'device SMS', 'recipient':recipient, 'status':'submitted to Android; delivery unconfirmed'}));
         } catch (_) {
-          if (mounted) setState(() => alertResults.add({'kind':'device SMS', 'recipient':recipient, 'status':'failed or permission denied'}));
+          if (mounted) setState(() => alertResults.add({'kind':'device SMS', 'recipient':recipient, 'status':'submission failed or unknown; not retried automatically'}));
         }
       }
     }

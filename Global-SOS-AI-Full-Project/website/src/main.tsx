@@ -13,7 +13,7 @@ type Directory={version:string;countries:{code:string;name:string;un_member:bool
 type Contact=AlertContact;type Session={id:string;capability:string;expires_in:number};
 const tabs=['Home','SOS','AI Assistant','All Helplines','My Safety','Settings','Download','Admin'];
 const icons=['⌂','SOS','✦','☷','♡','⚙','↓','✓'];
-function cachedDirectory():Directory{try{const saved=JSON.parse(localStorage.getItem('sos_directory')||'null');return !saved || (Number(saved.bundle_release??1)<Number(bundled.bundle_release) && !saved.records.some((r:RecordItem)=>r.verification_status==='admin_approved')) ? bundled : saved;}catch{return bundled as Directory;}}
+function cachedDirectory():Directory{try{const saved=JSON.parse(localStorage.getItem('sos_directory')||'null');return !saved || (saved.origin!=='server' && Number(saved.bundle_release??1)<Number(bundled.bundle_release) && !saved.records.some((r:RecordItem)=>r.verification_status==='admin_approved')) ? bundled : saved;}catch{return bundled as Directory;}}
 function stored<T>(key:string,fallback:T):T{try{return JSON.parse(localStorage.getItem(key)||'null')??fallback;}catch{return fallback;}}
 async function api(path:string,options:RequestInit={}){const r=await fetch('/api'+path,{...options,headers:{'Content-Type':'application/json',...options.headers},signal:AbortSignal.timeout(15000)});if(!r.ok){let e;try{e=(await r.json()).error;}catch{}throw Error(e||'Service unavailable');}return r.status===204?null:r.json();}
 function App(){

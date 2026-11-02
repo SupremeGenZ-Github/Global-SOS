@@ -88,6 +88,20 @@ Future<void> start(
 }
 
 void main() {
+  testWidgets('SOS preparation opens below the app navigator and can be cancelled', (tester) async {
+    await start(tester);
+    await tester.tap(find.widgetWithText(ElevatedButton, 'SOS'));
+    await tester.pumpAndSettle();
+    expect(find.text('Prepare your SOS'), findsOneWidget);
+    expect(find.text('Include location'), findsOneWidget);
+    await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.text('Prepare your SOS'), findsNothing);
+    expect(find.text('Opening dialer in 5'), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('SOS opens India 112 only after five seconds, without network', (
     tester,
   ) async {
