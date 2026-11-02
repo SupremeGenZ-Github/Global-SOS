@@ -1,3 +1,9 @@
+# Global SOS v4
+
+Native Android and web safety tools connected to https://global-sos.onrender.com.
+
+See [v4 setup and limitations](docs/V4-SETUP.md) for SOS permissions, trusted-contact automation, PostgreSQL, Render configuration and Android builds.
+
 # Global SOS AI — v0.3.0
 
 One Tap. One Conversation. Help Anywhere.

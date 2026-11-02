@@ -1,6 +1,6 @@
 import {useState} from 'react';
 import checklist from '../../shared/safety-checklist.json';
-type Contact={id:string;name:string;phone:string};
+import type {AlertContact as Contact} from './AlertSettings';
 const read=<T,>(key:string,fallback:T):T=>{try{return JSON.parse(localStorage.getItem(key)||'null')??fallback;}catch{return fallback;}};
 export function SafetyExtras({contacts,country,emergency,onContacts}:{contacts:Contact[];country:string;emergency:string|null;onContacts:(c:Contact[])=>void}){
  const [checked,setChecked]=useState<Record<string,boolean>>(()=>read('sos_checklist',{})),[medical,setMedical]=useState(()=>read<string>('sos_medical','')),[includeMedical,setIncludeMedical]=useState(false),[editing,setEditing]=useState<string|null>(null),[name,setName]=useState(''),[phone,setPhone]=useState(''),[notice,setNotice]=useState('');

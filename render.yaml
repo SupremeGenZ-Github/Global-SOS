@@ -1,0 +1,48 @@
+services:
+  - type: web
+    name: global-sos
+    runtime: node
+    rootDir: Global-SOS-AI-Full-Project
+    plan: free
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 24.21.0
+      - key: DATABASE_URL
+        sync: false
+      - key: APP_BASE_URL
+        value: https://global-sos.onrender.com
+      - key: CORS_ORIGINS
+        value: https://global-sos.onrender.com
+      - key: ADMIN_REVIEW_TOKEN
+        generateValue: true
+      - key: ADMIN_PUBLISH_TOKEN
+        generateValue: true
+      - key: AI_PROVIDER
+        value: none
+      - key: DIRECTORY_UPDATE_INTERVAL
+        value: '86400'
+      - key: MONITOR_CONTACT
+        sync: false
+      - key: ALERT_CLIENT_TOKEN
+        sync: false
+      - key: ALERT_ALLOWED_RECIPIENTS
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_SMS_FROM
+        sync: false
+      - key: TWILIO_WHATSAPP_FROM
+        sync: false
+      - key: TWILIO_WHATSAPP_TEMPLATE_SID
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: ALERT_EMAIL_FROM
+        sync: false
