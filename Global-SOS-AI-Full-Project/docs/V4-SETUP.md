@@ -109,9 +109,10 @@ Production updates require your existing private upload key; never commit a keys
 SEND_SMS is restricted on Google Play. Declare the physical-safety/emergency-alert use case
 and obtain the required approval before publishing. This build does not assert Play approval.
 
-The existing website APK remains v0.3 until the verified v4 binary is staged with
-scripts/stage-android-release.mjs; a successful source build does not update its release chunks.
-Do not relabel the old APK as v4.
+The GitHub branch retains the previous v0.3 release chunks until a verified build is available.
+The CI artifact includes Full Project and Render ZIPs with the newly verified v4 APK staged inside.
+Deploy the contents of the generated Render ZIP to serve v4 from /download. Merely merging source
+without staging the new binary retains v3. Never relabel the old APK as v4.
 
 ## Validation status
 

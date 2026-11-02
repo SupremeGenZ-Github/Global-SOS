@@ -70,7 +70,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
   bool notifying = false;
   bool addressConsent = false;
   bool syncing = false, preparingSOS = false, deviceSmsGranted = false;
-  int sosGeneration = 0;
+  int sosGeneration = 0, locationGeneration = 0;
   DateTime? lastSync;
   Future<void>? pendingLocation;
   Api get api => Api(serverInput.text.trim());
@@ -270,6 +270,8 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         ],
       ));
       if (choice == null || !mounted) return;
+      ++locationGeneration;
+      pendingLocation = null;
       locationConsent = choice == 'location';
       position = null;
       if (locationConsent) {
@@ -285,7 +287,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       if (!mounted || WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) return;
       if (locationConsent) pendingLocation = locate();
       armCountdown();
-    } catch (_) { note('Permission setup unavailable. Use the emergency call buttons below.'); }
+    } catch (_) { locationConsent = false; deviceSmsGranted = false; pendingLocation = null; note('Optional permissions unavailable. Continuing to the emergency dialer.'); if (mounted) armCountdown(); }
     finally { if (mounted) setState(() => preparingSOS = false); }
   }
 
@@ -390,6 +392,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
   }
 
   Future<void> locate() async {
+    final generation = locationGeneration;
     try {
       if (!await Geolocator.isLocationServiceEnabled()) {
         note(
@@ -412,7 +415,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
           timeLimit: Duration(seconds: 15),
         ),
       );
-      if (mounted && (preparingSOS || countdown != null || active || !locationConsent)) setState(() => position = pos);
+      if (mounted && generation == locationGeneration && (preparingSOS || countdown != null || active || !locationConsent)) setState(() => position = pos);
       note(
         'Location captured locally. Confirm your country manually; GPS does not establish emergency jurisdiction.',
       );
@@ -620,6 +623,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       : '${serverInput.text.replaceAll(RegExp(r'/+$'), '')}/#share=${session!['id']}.${session!['capability']}';
   Future<void> finish(String result) async {
     ++sosGeneration;
+    ++locationGeneration;
     setState(() => active = false);
     await stopSharing();
     if (session != null) {
@@ -655,6 +659,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       if (widget.directoryLoader == null && !active && (lastSync == null || DateTime.now().difference(lastSync!).inMinutes >= 5)) unawaited(sync());
     } else {
       unawaited(stopSharing());
+      if (countdown != null) ++locationGeneration;
       countdownTimer?.cancel();
       if (mounted) setState(() => countdown = null);
     }
@@ -1164,7 +1169,9 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
               FilledButton(
                 onPressed: () {
                   countdownTimer?.cancel();
-                  setState(() => countdown = null);
+                  ++locationGeneration;
+                  pendingLocation = null;
+                  setState(() {countdown = null; position = null;});
                 },
                 child: const Text('Cancel countdown'),
               ),
