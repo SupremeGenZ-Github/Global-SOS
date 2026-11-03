@@ -19,7 +19,13 @@ export async function prepareDownload(source,destination){
  if(length!==info.size_bytes||createHash('sha256').update(apk).digest('hex')!==info.sha256)throw Error('APK integrity check failed');
  await mkdir(destination,{recursive:true});
  const target=resolve(destination,'Global-SOS-AI.apk'),temporary=target+'.tmp';
- await writeFile(temporary,apk);await rm(target,{force:true});await rename(temporary,target);
+ await writeFile(temporary,apk);
+ // Antivirus scanners can briefly lock a new APK on Windows. Retry the
+ // replacement without deleting the last valid public download first.
+ for(let attempt=0;;attempt++){
+  try{await rename(temporary,target);break;}
+  catch(error){if(attempt>=5||!['EPERM','EBUSY','EACCES'].includes(error.code))throw error;await new Promise(r=>setTimeout(r,100*(attempt+1)));}
+ }
  await writeFile(resolve(destination,'release.json'),JSON.stringify(info,null,2));
  return {available:true,version:info.version,size_bytes:length};
 }

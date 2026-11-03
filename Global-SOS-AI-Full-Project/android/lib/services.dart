@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'localization.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/services.dart';
@@ -84,6 +85,8 @@ final List<Json> assistantFAQ =
             as List)
         .cast<Json>();
 String classify(String text) {
+  final multilingual = AppLanguages.intent(text);
+  if (multilingual != null) return multilingual;
   final t = text.toLowerCase();
   final rules = <String, String>{
     'mental': r'suicid|self.harm|kill myself|end my life',
@@ -114,10 +117,12 @@ String classify(String text) {
   return 'other';
 }
 
-bool isUrgent(String t) => RegExp(
-  r'unconscious|not breathing|can.t breathe|cannot breathe|choking|stabbed|severe bleeding|\bfire\b|attack|immediate|gun|suicid|kill myself|overdose|earthquake|flood|gas leak',
-  caseSensitive: false,
-).hasMatch(t);
+bool isUrgent(String t) =>
+    AppLanguages.intent(t) != null ||
+    RegExp(
+      r'unconscious|not breathing|can.t breathe|cannot breathe|choking|stabbed|severe bleeding|\bfire\b|attack|immediate|gun|suicid|kill myself|overdose|earthquake|flood|gas leak',
+      caseSensitive: false,
+    ).hasMatch(t);
 List<Json> selectRecords(
   List<Json> records,
   String country, {
@@ -259,6 +264,14 @@ class SafetyVault {
   Future<void> clear() => secure.delete(key: 'safety');
 }
 
+class ApiFailure implements Exception {
+  final int status;
+  final String message;
+  ApiFailure(this.status, this.message);
+  @override
+  String toString() => message;
+}
+
 class Api {
   String base;
   Api(this.base);
@@ -287,10 +300,15 @@ class Api {
     final client = http.Client();
     try {
       final response = await http.Response.fromStream(
-        await client.send(request).timeout(const Duration(seconds: 15)),
-      ).timeout(const Duration(seconds: 15));
+        await client.send(request).timeout(const Duration(seconds: 30)),
+      ).timeout(const Duration(seconds: 30));
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw HttpException('Server unavailable (${response.statusCode})');
+        String message = 'Server request failed (HTTP ${response.statusCode}).';
+        try {
+          final data = jsonDecode(response.body) as Json;
+          message = data['error']?.toString() ?? message;
+        } catch (_) {}
+        throw ApiFailure(response.statusCode, message);
       }
       if (response.body.isEmpty) return {};
       return jsonDecode(response.body) as Json;

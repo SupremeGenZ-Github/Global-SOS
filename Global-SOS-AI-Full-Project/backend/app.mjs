@@ -17,17 +17,23 @@ export function createApp({pool=null,env=process.env,dbRequired=false}={}){
  app.use(express.json({limit:'32kb'}));app.use('/api',rateLimit({windowMs:60000,limit:120,standardHeaders:'draft-8',legacyHeaders:false}));
  const run=fn=>async(req,res,next)=>{try{await fn(req,res);}catch(e){next(e);}};
  const withDB=async fn=>{if(!pool)throw Object.assign(new Error('This operation requires a healthy PostgreSQL connection'),{status:503});const c=await pool.connect();try{return await fn(c);}finally{c.release();}};
- const readSnapshot=()=>dbRequired&&!pool?Promise.reject(Object.assign(new Error('Directory database unavailable; use your saved offline directory'),{status:503})):withOptional();
- const withOptional=()=>pool?withDB(snapshot):snapshot(null);
+ const databaseReady=()=>!!pool&&(pool.isReady?pool.isReady():true);
+ const databaseStatus=()=>pool?.status?.()??{configured:dbRequired||!!pool,ready:databaseReady(),state:databaseReady()?'connected':dbRequired?'unavailable':'not_configured'};
+ let lastSnapshot=null;
+ const readSnapshot=async()=>{
+  if(databaseReady())try{const data=await withDB(snapshot);lastSnapshot=data;return {...data,storage:'postgresql',authoritative:true};}catch{/* The public directory stays usable; writes still fail closed. */}
+  return {...(lastSnapshot??seed),storage:lastSnapshot?'last_known_database':'bundled_fallback',authoritative:false,database_status:databaseStatus().state,notice:'Public directory available. PostgreSQL-dependent features need a healthy database connection.'};
+ };
  const auth=(req,res,next)=>{const supplied=(req.headers.authorization??'').replace(/^Bearer /,'');if(equalSecret(supplied,env.ADMIN_REVIEW_TOKEN)){req.actor='reviewer';return next();}if(equalSecret(supplied,env.ADMIN_PUBLISH_TOKEN)){req.actor='publisher';return next();}res.status(401).json({error:'Administrator authentication required'});};
  const downloads=androidDownloads(env.ANDROID_RELEASE_DIR??resolve(dirname(fileURLToPath(import.meta.url)),'../public-downloads/android'));
  app.get('/api/releases/android',downloads.metadata);
  app.get('/downloads/Global-SOS-AI.apk',downloads.apk);
  app.get('/downloads/Global-SOS-AI.apk.sha256',downloads.checksum);
- app.get('/health',(req,res)=>res.json({status:'alive',version:'0.4.0'}));
- app.get('/ready',run(async(req,res)=>{if(dbRequired&&!pool)return res.status(503).json({status:'database_unavailable'});if(pool)await withDB(db=>db.query('SELECT 1'));res.json({status:'ready',storage:pool?'postgresql':'read_only_snapshot',generative_ai:env.AI_PROVIDER==='openai-compatible'?'configured_not_health_checked':'not_configured'});}));
- app.get('/api/config',(req,res)=>res.json({app_base_url:env.APP_BASE_URL,version:'0.4.0',categories,countries:seed.countries,ai_configured:env.AI_PROVIDER==='openai-compatible',accounts_enabled:false,notifications:notificationConfig(env),live_sessions_enabled:!!pool}));
- app.get('/api/directory',run(async(req,res)=>{const s=await readSnapshot();const version=String(s.version);if(req.query.version===version)return res.json({unchanged:true,version});res.json(s);}));
+ app.get('/health',(req,res)=>res.json({status:'alive',version:'0.4.1'}));
+ app.get('/ready',run(async(req,res)=>{let available=databaseReady();if(available)try{await withDB(db=>db.query('SELECT 1'));}catch{available=false;}res.status(dbRequired&&!available?503:200).json({status:dbRequired&&!available?'database_unavailable':'ready',storage:available?'postgresql':'read_only_snapshot',directory_available:true,database:databaseStatus(),generative_ai:env.AI_PROVIDER==='openai-compatible'?'configured_not_health_checked':'not_configured'});}));
+ app.get('/api/status',(req,res)=>res.json({version:'0.4.1',server:'online',directory:'available',database:databaseStatus(),live_sessions_enabled:databaseReady(),online_ai:env.AI_PROVIDER==='openai-compatible'?'configured':'not_configured'}));
+ app.get('/api/config',(req,res)=>res.json({app_base_url:env.APP_BASE_URL,version:'0.4.1',categories,countries:seed.countries,ai_configured:env.AI_PROVIDER==='openai-compatible',accounts_enabled:false,notifications:notificationConfig(env),live_sessions_enabled:databaseReady()}));
+ app.get('/api/directory',run(async(req,res)=>{const s=await readSnapshot();const version=String(s.version);if(s.authoritative&&req.query.version===version)return res.json({unchanged:true,version,authoritative:true,storage:s.storage});res.json(s);}));
  app.get('/api/helplines',run(async(req,res)=>{const q=z.object({country:z.enum(seed.countries.map(c=>c.code)),category:z.enum(categoryIds).optional(),q:z.string().max(200).optional(),channel:z.enum(['phone','sms','whatsapp','email','web']).optional(),region:z.string().max(200).optional()}).parse(req.query);const s=await readSnapshot();res.json({records:filterRecords(s.records,q),version:s.version});}));
  app.post('/api/chat',rateLimit({windowMs:60000,limit:15,standardHeaders:'draft-8',legacyHeaders:false}),run(async(req,res)=>{
   const body=z.object({country:z.enum(seed.countries.map(c=>c.code)),message:z.string().trim().min(1).max(2000),region:z.string().max(200).optional(),allow_online:z.boolean().default(false)}).parse(req.body);
@@ -40,7 +46,7 @@ export function createApp({pool=null,env=process.env,dbRequired=false}={}){
   // Only immediate police/medical/fire routes may supplement an urgent unmatched request, never another country or a restricted regional route.
   if(urgent(body.message)&&category==='other')records=[];
   if(urgent(body.message)&&!records.some(r=>r.channels.some(c=>c.immediate))){const immediate=s.records.filter(r=>r.country===body.country&&!r.region&&r.categories.some(c=>['police','ambulance','fire'].includes(c))&&r.channels.some(c=>c.immediate));records=[...immediate,...records.filter(r=>!immediate.some(x=>x.id===r.id))];}
-  res.json({mode,category,message:responseFor(body.message,category,records),records,ai_error:aiError,notification_status:'not_sent'});
+  res.json({mode,category,message:responseFor(body.message,category,records),records,authoritative:s.authoritative,storage:s.storage,ai_error:aiError,notification_status:'not_sent'});
  }));
  app.get('/api/admin/reviews',auth,run(async(req,res)=>res.json(await withDB(async db=>({reviews:(await db.query('SELECT * FROM verification_reviews ORDER BY created_at DESC LIMIT 100')).rows,sources:(await db.query('SELECT id,url,approved,last_checked,robots_status FROM sources ORDER BY id')).rows,audit:(await db.query('SELECT * FROM audit_logs ORDER BY id DESC LIMIT 50')).rows})))));
  app.post('/api/admin/proposals',auth,run(async(req,res)=>{if(req.actor!=='reviewer')return res.status(403).json({error:'Use the reviewer role to propose'});const record=recordSchema.parse(req.body);const id=await withDB(db=>propose(db,record,req.actor));res.status(201).json({id,status:'pending'});}));
@@ -58,5 +64,5 @@ export function createApp({pool=null,env=process.env,dbRequired=false}={}){
  app.patch('/api/sos/:id',run(async(req,res)=>{const {status}=z.object({status:z.enum(['safe','cancelled'])}).parse(req.body);await withDB(async db=>{const row=await accessSOS(req,db);await db.query('UPDATE sos_sessions SET status=$2 WHERE id=$1',[row.id,status]);await db.query('DELETE FROM location_updates WHERE session_id=$1',[row.id]);});res.json({status});}));
  app.delete('/api/sos/:id',run(async(req,res)=>{await withDB(async db=>{await accessSOS(req,db);await db.query('DELETE FROM sos_sessions WHERE id=$1',[req.params.id]);});res.sendStatus(204);}));
  const dist=resolve(dirname(fileURLToPath(import.meta.url)),'../website/dist');app.use(express.static(dist,{maxAge:0}));app.get('/{*path}',(req,res,next)=>req.path.startsWith('/api/')?res.status(404).json({error:'Unknown API route'}):res.sendFile(resolve(dist,'index.html'),e=>e&&next(e)));
- app.use((error,req,res,next)=>{if(res.headersSent)return next(error);const validation=error instanceof z.ZodError;const status=validation?400:error.status??500;res.status(status).json({error:validation?'Invalid request':status<500?error.message:'Service unavailable. Use the saved offline directory.'});});return app;
+ app.use((error,req,res,next)=>{if(res.headersSent)return next(error);const validation=error instanceof z.ZodError;const status=validation?400:error.status??500;res.status(status).json({code:status===503?'database_unavailable':status===429?'rate_limited':'request_failed',error:validation?'Invalid request':status===503?'PostgreSQL is unavailable. Check DATABASE_URL in Render; the public directory and local calling remain available.':status<500?error.message:'Service temporarily unavailable. Your saved directory remains available.'});});return app;
 }

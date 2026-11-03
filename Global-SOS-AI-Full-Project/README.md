@@ -1,3 +1,7 @@
+# Global SOS v4.1
+
+Connection recovery, 32-language core navigation, clearer online status and an emergency-siren website interface. [Read the setup guide](docs/V41-SETUP.md).
+
 # Global SOS v4
 
 Native Android and web safety tools connected to https://global-sos.onrender.com.
