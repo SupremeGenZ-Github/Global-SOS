@@ -1,10 +1,24 @@
+# Global SOS v4
+
+The v4 source connects the native Android app to **https://global-sos.onrender.com** automatically, adds SOS permission choices, fresh-location trusted alerts, optional SIM SMS, contact import, clearer status and updated UI.
+
+- [v4 setup, PostgreSQL and messaging configuration](Global-SOS-AI-Full-Project/docs/V4-SETUP.md)
+- [v4 source](Global-SOS-AI-Full-Project)
+- [Android builds and validation](https://github.com/SupremeGenZ-Github/Global-SOS/actions/workflows/v4.yml)
+
+Emergency calls open the phone dialer after five seconds; Android requires **Call** confirmation.
+Automatic alerts require consent, permitted contacts and an enabled sending method.
+The website APK remains v3 until a verified v4 binary is staged. Current build results are in Actions.
+
+---
+
 # Global SOS AI
 
 **One Tap. One Conversation. Help Anywhere.**
 
 Global SOS AI combines a Flutter Android app, a React website and a Node.js API to help people find government-source emergency and specialist contacts. The Android directory works offline. Optional server features add approved directory updates, private location-sharing sessions, online AI routing and trusted-contact alerts.
 
-**Current release: 0.3.0 · Development/test signed · ARM64 Android 8.0+**
+**Previous packaged release: 0.3.0 · Development/test signed · ARM64 Android 8.0+**
 
 > This project is not an emergency dispatch service. Opening a dialer or message composer does not confirm connection or delivery. Physical-phone operation and live messaging delivery have not been independently verified.
 

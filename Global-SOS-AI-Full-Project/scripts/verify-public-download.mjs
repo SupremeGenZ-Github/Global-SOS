@@ -12,5 +12,5 @@ try{
  const bytes=Buffer.from(await response.arrayBuffer());const hash=createHash('sha256').update(bytes).digest('hex');
  if(hash!==metadata.sha256||bytes.length!==metadata.size_bytes)throw Error('Served APK differs from release');
  const result={version:metadata.version,page_status:page.status,apk_status:response.status,bytes:bytes.length,sha256:hash,hash_matches:true,authentication_required:false,browser_interaction_tested:false};
- await writeFile(new URL('../docs/evidence/v3-public-download.json',import.meta.url),JSON.stringify(result,null,2));console.log(result);
+ await writeFile(new URL('../docs/evidence/v4-public-download.json',import.meta.url),JSON.stringify(result,null,2));console.log(result);
 }finally{await new Promise((resolve,reject)=>server.close(e=>e?reject(e):resolve()));}

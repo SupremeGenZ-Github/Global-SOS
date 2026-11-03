@@ -1,5 +1,10 @@
 package org.globalsos.global_sos_ai
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import android.provider.ContactsContract
+import android.telephony.SmsManager
 import android.app.Activity
 import android.content.Intent
 import android.location.Geocoder
@@ -12,6 +17,8 @@ import io.flutter.plugin.common.MethodChannel
 import java.util.Locale
 
 class MainActivity : FlutterActivity() {
+    private var contactResult: MethodChannel.Result? = null
+    private var permissionResult: MethodChannel.Result? = null
     private var speechResult: MethodChannel.Result? = null
     private var tts: TextToSpeech? = null
     private var ttsReady = false
@@ -21,6 +28,35 @@ class MainActivity : FlutterActivity() {
         MethodChannel(engine.dartExecutor.binaryMessenger, "org.globalsos/device").setMethodCallHandler { call, result ->
             try {
                 when (call.method) {
+                    "pickContact" -> {
+                        if (contactResult != null) result.error("BUSY", "Contact picker already open", null)
+                        else {
+                            contactResult = result
+                            try { startActivityForResult(Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI), 702) }
+                            catch (e: Exception) { contactResult = null; throw e }
+                        }
+                    }
+                    "requestSmsPermission" -> {
+                        if (checkSelfPermission(Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED) result.success(true)
+                        else if (permissionResult != null) result.error("BUSY", "Permission request in progress", null)
+                        else {
+                            permissionResult = result
+                            requestPermissions(arrayOf(Manifest.permission.SEND_SMS), 703)
+                        }
+                    }
+                    "sendSms" -> {
+                        val recipient = call.argument<String>("recipient") ?: ""
+                        val message = call.argument<String>("message") ?: ""
+                        require(Regex("\\+[1-9][0-9]{7,14}").matches(recipient)) { "Use an international trusted-contact number" }
+                        require(message.isNotBlank() && message.length <= 1000) { "Invalid message" }
+                        if (checkSelfPermission(Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) result.error("PERMISSION", "SMS permission denied", null)
+                        else {
+                            @Suppress("DEPRECATION")
+                            val manager = if (Build.VERSION.SDK_INT >= 31) getSystemService(SmsManager::class.java) else SmsManager.getDefault()
+                            manager.sendMultipartTextMessage(recipient, null, manager.divideMessage(message), null, null)
+                            result.success(null)
+                        }
+                    }
                     "dial" -> {
                         val number = call.argument<String>("number") ?: ""
                         if (!Regex("\\+?[0-9]{2,18}").matches(number)) result.error("NUMBER", "Invalid number", null)
@@ -64,10 +100,28 @@ class MainActivity : FlutterActivity() {
     }
     @Deprecated("Legacy speech activity result")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        if (requestCode == 701) {
+        if (requestCode == 702) {
+            try {
+                val uri = if (resultCode == Activity.RESULT_OK) data?.data else null
+                val contact = uri?.let {
+                    contentResolver.query(it, arrayOf(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, ContactsContract.CommonDataKinds.Phone.NUMBER), null, null, null)?.use { cursor ->
+                        if (cursor.moveToFirst()) mapOf("name" to cursor.getString(0), "phone" to cursor.getString(1)) else null
+                    }
+                }
+                contactResult?.success(contact)
+            } catch (e: Exception) { contactResult?.error("CONTACT", "Unable to read selected contact", null) }
+            finally { contactResult = null }
+        } else if (requestCode == 701) {
             speechResult?.success(if (resultCode == Activity.RESULT_OK) data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull() else null)
             speechResult = null
         } else super.onActivityResult(requestCode, resultCode, data)
     }
-    override fun onDestroy() { tts?.shutdown(); speechResult?.success(null); speechResult = null; super.onDestroy() }
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 703) {
+            permissionResult?.success(grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)
+            permissionResult = null
+        }
+    }
+    override fun onDestroy() { contactResult?.success(null); contactResult = null; permissionResult?.success(false); permissionResult = null; tts?.shutdown(); speechResult?.success(null); speechResult = null; super.onDestroy() }
 }

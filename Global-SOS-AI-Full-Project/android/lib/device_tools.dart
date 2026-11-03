@@ -5,6 +5,9 @@ import 'services.dart';
 
 class DeviceTools {
   static const platform = MethodChannel('org.globalsos/device');
+  static Future<bool> requestSmsPermission() async => await platform.invokeMethod<bool>('requestSmsPermission') ?? false;
+  static Future<void> sendSms(String recipient, String message) => platform.invokeMethod<void>('sendSms', {'recipient':recipient, 'message':message});
+  static Future<Json?> pickContact() => platform.invokeMapMethod<String, dynamic>('pickContact');
   static Future<void> dial(String number) =>
       platform.invokeMethod<void>('dial', {'number': number});
   static Future<String?> listen(String language) =>
