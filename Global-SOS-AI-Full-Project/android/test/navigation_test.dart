@@ -162,10 +162,30 @@ void main() {
     await start(tester);
     await tester.tap(find.byType(NavigationDestination).at(3));
     await tester.pumpAndSettle();
-    expect(find.text('All helplines'), findsOneWidget);
+    expect(find.text('All Helplines'), findsWidgets);
     expect(find.text('Fixture emergency service'), findsOneWidget);
     expect(find.text('Other-country fixture'), findsNothing);
     expect(tester.takeException(), isNull);
+  });
+  testWidgets('trip planner previews a draft without sending alerts', (tester) async {
+    await start(tester);
+    await tester.tap(find.byType(NavigationDestination).at(4));
+    await tester.pumpAndSettle();
+    final openPlanner = find.widgetWithText(OutlinedButton, 'Trip plan and personal reminder');
+    await tester.scrollUntilVisible(openPlanner, 200, scrollable: find.byType(Scrollable).first);
+    await tester.tap(openPlanner);
+    await tester.pumpAndSettle();
+    final dialog = find.byType(AlertDialog);
+    final field = find.descendant(of: dialog, matching: find.byType(TextField)).first;
+    await tester.enterText(field, 'Trip fixture');
+    await tester.pumpAndSettle();
+    final preview = find.descendant(of: dialog, matching: find.text('Preview plan'));
+    await tester.ensureVisible(preview);
+    await tester.tap(preview);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Destination: Trip fixture'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
   });
   testWidgets('offline assistant works with no model and no network', (
     tester,

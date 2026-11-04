@@ -9,7 +9,7 @@ void main() {
     () async {
       await AppLanguages.load();
       expect(AppLanguages.languages.length, 32);
-      expect(AppLanguages.translate('te', 'Home'), 'హోమ్');
+      expect(AppLanguages.translate('te', 'Home'), 'ప్రధాన పేజీ');
       expect(AppLanguages.translate('ta', 'Settings'), 'அமைப்புகள்');
       expect(AppLanguages.get('ar')['direction'], 'rtl');
       expect(classify('పోలీసు'), 'police');
