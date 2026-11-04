@@ -94,80 +94,80 @@ export function SafetyHub({contacts, quiet, t}: {t: (label: string) => string; c
     }
   }
 
-  return <section className="v5-safety-hub" aria-label="Safety tools">
+  return <section className="v5-safety-hub" aria-label={t("Safety tools")}>
     <article className="service-card">
       <h2>{t("Share my location")}</h2>
-      <p>Request a single fix, review the timestamp, then choose how to share it.</p>
-      <button disabled={locating} onClick={locate}>{locating ? 'Getting location…' : 'Get location'}</button>
+      <p>{t("Request a single fix, review the timestamp, then choose how to share it.")}</p>
+      <button disabled={locating} onClick={locate}>{t(locating ? "Getting location…" : "Get current location")}</button>
       {fix && <>
         <p className="share-preview">{positionText}</p>
-        <button onClick={() => void share(positionText)}>Share location</button>
-        <label className="toggle"><input type="checkbox" checked={includeLocation} onChange={e => setIncludeLocation(e.target.checked)}/> Include this fix in the alert preview</label>
+        <button onClick={() => void share(positionText)}>{t("Share location")}</button>
+        <label className="toggle"><input type="checkbox" checked={includeLocation} onChange={e => setIncludeLocation(e.target.checked)}/> {t("Include this fix in the alert preview")}</label>
       </>}
     </article>
     <article className="service-card">
       <h2>{t("Send a trusted-contact alert")}</h2>
       <p className="share-preview">{alertText}</p>
-      <label>Trusted contact <select value={contactId} onChange={e => setContactId(e.target.value)}>
-        <option value="">Choose a contact</option>
+      <label>{t("Trusted contact")} select value={contactId} onChange={e => setContactId(e.target.value)}>
+        <option value="">{t("Choose a contact")}</option>
         {contacts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
       </select></label>
       <div className="button-row">
-        {number && <a className="contact primary" href={`sms:${number}?body=${encodeURIComponent(alertText)}`}>Open SMS</a>}
-        {/^\+[1-9][0-9]{7,14}$/.test(number) && <a className="contact primary" href={`https://wa.me/${number.slice(1)}?text=${encodeURIComponent(alertText)}`} target="_blank" rel="noreferrer">Open WhatsApp</a>}
-        <button onClick={() => void share(alertText)}>Other apps / copy</button>
+        {number && <a className="contact primary" href={`sms:${number}?body=${encodeURIComponent(alertText)}`}>{t("Open SMS")}</a>}
+        {/^\+[1-9][0-9]{7,14}$/.test(number) && <a className="contact primary" href={`https://wa.me/${number.slice(1)}?text=${encodeURIComponent(alertText)}`} target="_blank" rel="noreferrer">{t("Open WhatsApp")}</a>}
+        <button onClick={() => void share(alertText)}>{t("Other apps / copy")}</button>
       </div>
-      <p>SMS and WhatsApp open a message for you to send. A share sheet cannot confirm delivery.</p>
-      <label>Contact’s private app invite <input value={invite} onChange={e => setInvite(e.target.value.trim())} maxLength={43} autoComplete="off" spellCheck={false}/></label>
+      <p>{t("SMS and WhatsApp open a message for you to send. A share sheet cannot confirm delivery.")}</p>
+      <label>{t("Trusted contact’s inbox invite")} input value={invite} onChange={e => setInvite(e.target.value.trim())} maxLength={43} autoComplete="off" spellCheck={false}/></label>
       <button disabled={busy || invite.length !== 43} onClick={() => void perform(async () => {
         await request('/alerts', 'POST', {invite, message:alertText, request_id:crypto.randomUUID()});
         setNotice('Stored in the contact’s inbox. Opening is unconfirmed.');
-      })}>Send in-app alert</button>
+      })}>{t("Send in-app alert")}</button>
     </article>
     <article className="service-card">
       <h2>{t("Private inbox and timed check-in")}</h2>
-      <p>Share the invite only with trusted people. This browser stores the inbox key locally. Open the inbox to see alerts.</p>
+      <p>{t("Share the invite only with trusted people. This browser stores the inbox key locally. Open the inbox to see alerts.")}</p>
       {inbox ? <>
-        <label>My invite <input readOnly value={inbox.invite}/></label>
+        <label>{t("My invite")} input readOnly value={inbox.invite}/></label>
         <div className="button-row">
-          <button onClick={() => void share(inbox.invite)}>Share invite</button>
-          <button disabled={busy} onClick={() => void perform(() => refresh())}>Refresh inbox</button>
+          <button onClick={() => void share(inbox.invite)}>{t("Share invite")}</button>
+          <button disabled={busy} onClick={() => void perform(() => refresh())}>{t("Refresh inbox")}</button>
           <button disabled={busy} onClick={() => {
-            if (!window.confirm('Delete this inbox, its alerts and linked check-ins?')) return;
+            if (!window.confirm(t("Delete this inbox, its alerts and linked check-ins?"))) return;
             void perform(async () => {
               await request('/inbox', 'DELETE', undefined, inbox.access_token);
               localStorage.removeItem('sos_v5_inbox');
               setInbox(null); setAlerts([]); setCheckins([]);
             });
-          }}>Delete inbox</button>
+          }}>{t("Delete inbox")}</button>
         </div>
         {alerts.map(alert => <div className="history-item" key={alert.id}>
           <p>{alert.message}</p><small>{new Date(alert.created_at).toLocaleString()}</small>
           {!alert.read_at && <button disabled={busy} onClick={() => void perform(async () => {
             await request('/inbox/read', 'POST', {id:alert.id}, inbox.access_token);
             await refresh();
-          })}>Acknowledge</button>}
+          })}>{t("Acknowledge")}</button>}
         </div>)}
-        <label>Check in within minutes <input type="number" min={1} max={1440} value={minutes} onChange={e => setMinutes(Number(e.target.value))}/></label>
+        <label>{t("Check-in in minutes (1–1440)")} input type="number" min={1} max={1440} value={minutes} onChange={e => setMinutes(Number(e.target.value))}/></label>
         <button disabled={busy || invite.length !== 43 || !Number.isInteger(minutes) || minutes < 1 || minutes > 1440} onClick={() => void perform(async () => {
           await request('/checkins', 'POST', {invite, minutes, message:'I missed my planned Global SOS check-in. Please contact me.'}, inbox.access_token);
           setNotice('Check-in saved. The server attempts inbox delivery after the deadline.');
           await refresh();
-        })}>Schedule for the invited contact</button>
-        <p>Check-ins use the same invite entered above. A sleeping or unavailable server can delay them.</p>
+        })}>{t("Schedule check-in")}</button>
+        <p>{t("Check-ins use the same invite entered above. A sleeping or unavailable server can delay them.")}</p>
         {checkins.map(item => <div className="history-item" key={item.id}>
           <p>{new Date(item.due_at).toLocaleString()} · {item.status.replaceAll('_', ' ')}</p>
           {item.status === 'pending' && ['safe','cancelled'].map(status => <button key={status} disabled={busy} onClick={() => void perform(async () => {
             await request('/checkins/'+item.id, 'PATCH', {status}, inbox.access_token);
             await refresh();
-          })}>{status === 'safe' ? 'I’m safe' : 'Cancel check-in'}</button>)}
+          })}>{t(status === 'safe' ? "I’m safe" : "Cancel check-in")}</button>)}
         </div>)}
       </> : <button disabled={busy} onClick={() => void perform(async () => {
         const created = await request('/inbox', 'POST');
         setInbox(created);
         try { localStorage.setItem('sos_v5_inbox', JSON.stringify(created)); }
         catch { setNotice('Browser storage is blocked. This inbox is available until you close this page.'); }
-      })}>Create private inbox</button>}
+      })}>{t("Create private inbox")}</button>}
     </article>
     <p role="status">{notice}</p>
   </section>;

@@ -1930,6 +1930,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     ),
     SafetyHub(
       api: api,
+      t: t,
       contacts: (safety['contacts'] as List).cast<Json>(),
       quiet: silentMode,
       inbox: safety['inbox'] as Json?,
