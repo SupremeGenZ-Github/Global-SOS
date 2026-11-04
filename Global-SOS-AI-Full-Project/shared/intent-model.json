@@ -7,7 +7,6 @@
       "flames": 0.5,
       "coming": 0.1667,
       "kitchen": 0.1667,
-      "building": 0.25,
       "smoke": 0.25,
       "burning": 0.25
     },
@@ -33,7 +32,6 @@
       "payment": 0.25
     },
     "road": {
-      "trapped": 0.2813,
       "vehicle": 0.375,
       "overturned": 0.375,
       "highway": 0.25,
@@ -42,18 +40,15 @@
     },
     "poison": {
       "drank": 0.375,
-      "swallowed": 0.375,
-      "child": 0.375
+      "swallowed": 0.375
     },
     "missing": {
       "daughter": 0.25,
       "never": 0.375,
       "returned": 0.25,
-      "home": 0.225,
       "relative": 0.25,
       "disappeared": 0.25,
-      "wandered": 0.25,
-      "school": 0.1667
+      "wandered": 0.25
     },
     "marine": {
       "offshore": 0.375,
@@ -76,7 +71,6 @@
       "cable": 0.375,
       "sparking": 0.25,
       "line": 0.25,
-      "fell": 0.1667,
       "across": 0.25,
       "gas": 0.375,
       "smell": 0.25,
@@ -85,12 +79,11 @@
     },
     "consular": {
       "embassy": 0.375,
-      "travel": 0.5,
+      "travel": 0.4,
       "documents": 0.375,
-      "citizen": 0.375,
+      "citizen": 0.2813,
       "overseas": 0.5,
       "consulate": 0.5,
-      "assistance": 0.25,
       "abroad": 0.25
     },
     "consumer": {
@@ -112,13 +105,93 @@
       "protective": 0.25,
       "guards": 0.25,
       "equipment": 0.375,
-      "workers": 0.25,
+      "workers": 0.1667,
       "construction": 0.25
     },
     "other": {
       "what": 0.25,
       "does": 0.25,
       "how": 0.25
+    },
+    "child": {
+      "child": 0.7273,
+      "neglect": 0.225,
+      "protection": 0.1667,
+      "caregiver": 0.225
+    },
+    "mental": {
+      "panic": 0.5,
+      "attacks": 0.375,
+      "anxiety": 0.5,
+      "mental": 0.375,
+      "health": 0.375,
+      "depression": 0.375
+    },
+    "trafficking": {
+      "trafficking": 0.5,
+      "recruiter": 0.375,
+      "confiscated": 0.25,
+      "passport": 0.5,
+      "forced": 0.2813,
+      "labor": 0.625,
+      "human": 0.25
+    },
+    "railway": {
+      "railway": 0.625,
+      "platform": 0.5,
+      "station": 0.5,
+      "train": 0.5,
+      "derailment": 0.25,
+      "tracks": 0.25
+    },
+    "senior": {
+      "elder": 0.75,
+      "abuse": 0.3333,
+      "elderly": 0.1667,
+      "senior": 0.625,
+      "care": 0.25
+    },
+    "disability": {
+      "wheelchair": 0.625,
+      "accessibility": 0.25,
+      "disability": 0.5,
+      "access": 0.25,
+      "accessible": 0.25,
+      "transport": 0.25
+    },
+    "flood": {
+      "floodwater": 0.5,
+      "rising": 0.25,
+      "people": 0.1667,
+      "rescue": 0.25,
+      "earthquake": 0.375,
+      "rubble": 0.375
+    },
+    "tourist": {
+      "tourist": 1,
+      "luggage": 0.25,
+      "police": 0.25,
+      "traveler": 0.375,
+      "holiday": 0.25
+    },
+    "women": {
+      "women": 0.375,
+      "safety": 0.25,
+      "harassment": 0.875,
+      "woman": 0.375,
+      "public": 0.225,
+      "sexual": 0.375
+    },
+    "disaster": {
+      "disaster": 0.625,
+      "relief": 0.5,
+      "cyclone": 0.5,
+      "evacuation": 0.4,
+      "centre": 0.25,
+      "during": 0.25,
+      "storm": 0.25,
+      "shelter": 0.2813,
+      "hurricane": 0.25
     }
   }
 }

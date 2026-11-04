@@ -85,6 +85,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: Global-SOS-v5-Android
-          path: artifacts/
+
           if-no-files-found: error
 

@@ -3,7 +3,12 @@ import {isDeepStrictEqual} from 'node:util';
 import {randomUUID} from 'node:crypto';
 import {categories,sha,token} from './core.mjs';
 export const seed=JSON.parse(await readFile(new URL('../shared/directory.json',import.meta.url),'utf8'));
-export async function migrate(db){await db.query(await readFile(new URL('../database/001_initial.sql',import.meta.url),'utf8'));await db.query("INSERT INTO schema_migrations(version) VALUES('001') ON CONFLICT DO NOTHING");}
+export async function migrate(db) {
+ for (const [version, filename] of [['001', '001_initial.sql'], ['002', '002_safety_tools.sql']]) {
+  await db.query(await readFile(new URL('../database/'+filename, import.meta.url), 'utf8'));
+  await db.query('INSERT INTO schema_migrations(version) VALUES($1) ON CONFLICT DO NOTHING', [version]);
+ }
+}
 export async function seedDB(db){
  await db.query('BEGIN');try{
  let changed=0;const alreadySeeded=(await db.query('SELECT version FROM directory_versions LIMIT 1')).rows.length>0;

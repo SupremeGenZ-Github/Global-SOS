@@ -151,3 +151,11 @@ npm audit --omit=dev
 ```
 
 The database tests use PGlite's actual PostgreSQL engine in-process. They do not prove connectivity to an external Neon/Render database. See `docs/API.md`, `SECURITY.md`, `PRIVACY.md`, and the execution evidence in `docs/evidence/`.
+
+### Global SOS v5 safety tools
+
+Open **My Safety** on web or Android to create an inbox and share its invite with a trusted contact. Keep the inbox owner key private. The invite can receive alerts but cannot read inbox contents. Recipients check the inbox in the app or web. Inbox messages expire after seven days. Missed check-ins are queued by PostgreSQL and processed while the backend is running. Use an always-running deployment for timely check-ins.
+
+SMS and WhatsApp compose screens require the user to send the message. Existing opt-in automatic alert channels require their configured Android permissions or server provider credentials. The general share sheet hands the text to the chosen app. Provider acceptance, inbox storage and recipient opening have separate meanings.
+
+The desktop console is available at /desktop and the phone layout at /mobile. Location sharing requests a foreground fix on demand and labels older or retained coordinates with their capture time. Medical notes stay local unless the user explicitly exports or shares them. The offline intent router uses 200 synthetic training examples across 25 categories and falls back to directory choices when uncertain.
