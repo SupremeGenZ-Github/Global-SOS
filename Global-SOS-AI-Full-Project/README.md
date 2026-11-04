@@ -1,28 +1,28 @@
-# Global SOS v4.1
+# Global SOS v5
 
-Connection recovery, 32-language core navigation, clearer online status and an emergency-siren website interface. [Read the setup guide](docs/V41-SETUP.md).
+Global SOS is an Android app and website for finding emergency contacts, preparing an SOS, and coordinating with trusted contacts. The Android app starts with a bundled offline directory and synchronizes updates from the HTTPS server.
 
-# Global SOS v4
+[Live website](https://global-sos.onrender.com) · [v5 source and review](https://github.com/SupremeGenZ-Github/Global-SOS/pull/5)
 
-Native Android and web safety tools connected to https://global-sos.onrender.com.
+## Start here
 
-See [v4 setup and limitations](docs/V4-SETUP.md) for SOS permissions, trusted-contact automation, PostgreSQL, Render configuration and Android builds.
+- Open the website on a computer for the desktop console, or use the [phone layout](https://global-sos.onrender.com/mobile).
+- Select your current country before using the directory. A listed country may have incomplete contact coverage.
+- Use **My Safety** to manage trusted contacts, open a private inbox, and schedule a check-in.
+- Use the official emergency channel when you need immediate help. Global SOS is a development release and has no emergency dispatch certification.
 
-# Global SOS AI — v0.3.0
+## Languages
 
-One Tap. One Conversation. Help Anywhere.
+The website and Android app use the same bundled catalog. The language picker offers **32 languages** for core navigation and the Home and Assistant introductions. Telugu, Hindi, and Tamil also have translated safety tools, location-sharing controls, and private inbox and check-in actions. Telugu **Home** is **ప్రధాన పేజీ**.
 
-This is a development release of a connected Flutter Android app, React/TypeScript website and Express/PostgreSQL API. **It is not certified for emergency dispatch or production reliance.** The directory works without an AI key. Calling and message buttons open external apps; they do not confirm connection or delivery.
+Coverage varies by screen. Untranslated interface text falls back to English. Official directory entries and user-written messages can appear in their original language. The 64-language expansion and complete screen coverage are still open.
 
-## New in 0.3
+## What's in v5
 
-The website now has a public **/download** page and serves the actual APK without a ChatGPT login. The full and Render ZIPs include checked Android release parts; build/start reconstructs and validates the download automatically. Keep the releases/android directory when uploading the source to GitHub. No database or API key is required for downloads.
-
-Personal readiness checklists are available on Android and the website. The website also adds printable emergency cards, contact editing, favorites-only filtering, sorting and setup diagnostics. See [the 0.3 upgrade guide](docs/UPGRADE-v0.3.md).
-
-## Upgrade from 0.1
-
-Read [the upgrade and provider configuration guide](docs/UPGRADE-v0.2.md). The SOS button now opens the native emergency dialer after five seconds. New source-checked specialist contacts, messaging channels, regional filtering, voice controls and country suggestions are included. See [the complete feature status](docs/FEATURE_STATUS.md) for implementation and device-validation boundaries.
+- Separate desktop console and phone-style layouts, with light and dark themes.
+- Trusted-contact alerts through private Global SOS inboxes, SMS and WhatsApp composers, and the system share sheet.
+- Scheduled check-ins, timestamped location previews, discreet alerts, and offline emergency cards.
+- Offline intent routing trained on 200 synthetic examples across 25 categories. The assistant uses reviewed directory entries for contact details.
 
 ## What is implemented
 
@@ -78,7 +78,7 @@ npm run migrate
 4. Set `DATABASE_URL`, `APP_BASE_URL=https://your-service.onrender.com`, and `CORS_ORIGINS` to that exact website origin. Do not include a trailing slash in origins.
 5. For admin features, use two different randomly generated tokens of at least 32 characters as `ADMIN_REVIEW_TOKEN` and `ADMIN_PUBLISH_TOKEN`. The Blueprint generates them. For source monitoring, set `MONITOR_CONTACT` to a real operator contact, first review applicable government site terms, and set the interval in seconds.
 6. Deploy. `/health` checks that the process is alive. `/ready` checks PostgreSQL if configured. A failed configured database yields 503 readiness; restart/redeploy after repairing connectivity.
-7. In Android Settings, enter the HTTPS Render URL and tap **Synchronize directory**. Alternatively set it in the GitHub build workflow input.
+7. Android defaults to `https://global-sos.onrender.com`. For a separate deployment, enter its HTTPS URL in Android Settings and tap **Synchronize directory**, or set the URL when building the app.
 
 The app uses only HTTPS APIs. Android never connects directly to PostgreSQL. Render deployments and external account setup were not performed as part of local packaging. A free web service may sleep; use infrastructure suitable for your actual availability requirements before relying on a hosted emergency-assistance service. Database and model hosting costs are separate.
 
@@ -148,6 +148,7 @@ Sign out and use the **different publisher token**. Check the government page yo
 npm test
 npm run build
 npm audit --omit=dev
+node --test tests/languages.test.mjs
 ```
 
 The database tests use PGlite's actual PostgreSQL engine in-process. They do not prove connectivity to an external Neon/Render database. See `docs/API.md`, `SECURITY.md`, `PRIVACY.md`, and the execution evidence in `docs/evidence/`.
