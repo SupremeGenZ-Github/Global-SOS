@@ -1386,7 +1386,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
   ];
   List<Widget> sos() => [
     heading(
-      'YOU STAY IN CONTROL',
+      'Emergency controls',
       'Emergency controls',
       'After five seconds, opens the verified emergency number in your phone dialer. Press Call there. Cancel below to stop.',
     ),
@@ -1540,12 +1540,12 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
   ];
   List<Widget> chat() => [
     heading(
-      'FIND YOUR NEXT STEP',
+      'AI Assistant',
       'AI Assistant',
       'Confirm your country. Describe the help you need.',
     ),
     ExpansionTile(
-      title: const Text('Help me choose'),
+      title: Text(t('Help me choose')),
       children: [
         for (final (label, value) in [
           ('Medical emergency', 'ambulance'),
@@ -1706,7 +1706,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     ).where((r) => !favoritesOnly || favorites.contains(r['id'])).toList();
     return [
       heading(
-        'OFFICIAL SOURCES. CLEAR CHOICES.',
+        'All Helplines',
         'All Helplines',
         'Government sources and verification dates on every service card.',
       ),
@@ -1911,7 +1911,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
 
   List<Widget> safetyPage() => [
     heading(
-      'YOUR PERSONAL SAFETY SPACE',
+      'My Safety',
       'My Safety',
       'Contacts are stored in encrypted device storage. No account required.',
     ),
@@ -2018,7 +2018,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
   ];
   List<Widget> settings() => [
     heading(
-      'ACCESSIBILITY & PRIVACY',
+      'Settings',
       'Settings',
       'Set your country manually. GPS alone never decides an emergency jurisdiction.',
     ),

@@ -18,7 +18,7 @@ async function request(path: string, method = 'GET', body?: object, key?: string
   return data;
 }
 
-export function SafetyHub({contacts, quiet}: {contacts: AlertContact[]; quiet: boolean}) {
+export function SafetyHub({contacts, quiet, t}: {t: (label: string) => string; contacts: AlertContact[]; quiet: boolean}) {
   const [inbox, setInbox] = useState<Inbox|null>(() => {
     try { return JSON.parse(localStorage.getItem('sos_v5_inbox') || 'null'); }
     catch { return null; }
@@ -96,7 +96,7 @@ export function SafetyHub({contacts, quiet}: {contacts: AlertContact[]; quiet: b
 
   return <section className="v5-safety-hub" aria-label="Safety tools">
     <article className="service-card">
-      <h2>Share my location</h2>
+      <h2>{t("Share my location")}</h2>
       <p>Request a single fix, review the timestamp, then choose how to share it.</p>
       <button disabled={locating} onClick={locate}>{locating ? 'Getting location…' : 'Get location'}</button>
       {fix && <>
@@ -106,7 +106,7 @@ export function SafetyHub({contacts, quiet}: {contacts: AlertContact[]; quiet: b
       </>}
     </article>
     <article className="service-card">
-      <h2>Send a trusted-contact alert</h2>
+      <h2>{t("Send a trusted-contact alert")}</h2>
       <p className="share-preview">{alertText}</p>
       <label>Trusted contact <select value={contactId} onChange={e => setContactId(e.target.value)}>
         <option value="">Choose a contact</option>
@@ -125,7 +125,7 @@ export function SafetyHub({contacts, quiet}: {contacts: AlertContact[]; quiet: b
       })}>Send in-app alert</button>
     </article>
     <article className="service-card">
-      <h2>Private inbox and timed check-in</h2>
+      <h2>{t("Private inbox and timed check-in")}</h2>
       <p>Share the invite only with trusted people. This browser stores the inbox key locally. Open the inbox to see alerts.</p>
       {inbox ? <>
         <label>My invite <input readOnly value={inbox.invite}/></label>
