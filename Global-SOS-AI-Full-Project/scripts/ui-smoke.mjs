@@ -55,7 +55,8 @@ try {
  assert.equal(await fallbackPage.locator('.sos-orb svg').count(),1,'SOS must have an emergency SVG icon');
  await fallbackPage.getByLabel('Interface language').selectOption('te');
  assert.equal(await fallbackPage.locator('html').getAttribute('lang'),'te');
- assert.ok((await fallbackPage.locator('nav').innerText()).includes('హోమ్'));
+ assert.ok((await fallbackPage.locator('nav').innerText()).includes('ప్రధాన పేజీ'));
+ assert.match(await fallbackPage.locator('.phone-home .page-heading').innerText(),/సరైన సహాయ సేవను కనుగొని/);
  await fallbackPage.getByLabel('Interface language').selectOption('ar');
  assert.equal(await fallbackPage.locator('html').getAttribute('dir'),'rtl');
  assert.ok(await fallbackPage.locator('body').evaluate(el=>el.scrollWidth<=window.innerWidth),'Arabic mobile layout must not overflow');
