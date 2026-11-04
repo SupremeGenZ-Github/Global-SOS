@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useEffect,useState} from 'react';
 import checklist from '../../shared/safety-checklist.json';
 import type {AlertContact as Contact} from './AlertSettings';
 const read=<T,>(key:string,fallback:T):T=>{try{return JSON.parse(localStorage.getItem(key)||'null')??fallback;}catch{return fallback;}};
@@ -60,6 +60,43 @@ function serializeLines(lines:string[]) {
 
 function calendarDate(date:Date) {
   return date.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}Z$/,'Z');
+}
+
+
+function PracticeDrill() {
+  const [deadline,setDeadline] = useState<number|null>(null);
+  const [remaining,setRemaining] = useState(5);
+  const [result,setResult] = useState('');
+  useEffect(() => {
+    if (deadline === null) return;
+    const tick = () => {
+      const seconds = Math.max(0,Math.ceil((deadline-Date.now())/1000));
+      setRemaining(seconds);
+      if (seconds === 0) {
+        setDeadline(null);
+        setResult('Practice complete. In a real emergency, follow the instructions on the SOS screen and confirm the call in your dialer.');
+      }
+    };
+    const timer = window.setInterval(tick,200);
+    return () => window.clearInterval(timer);
+  },[deadline]);
+
+  return <article className="service-card">
+    <h2>Practice the SOS countdown</h2>
+    <p>This drill runs on the page. It places no calls, sends no messages, and requests no permissions.</p>
+    {deadline === null ? <button onClick={() => {
+      setRemaining(5);
+      setResult('Practice started. You can cancel the countdown.');
+      setDeadline(Date.now()+5000);
+    }}>Start five-second practice</button> : <>
+      <p>Practice countdown: {remaining} seconds</p>
+      <button onClick={() => {
+        setDeadline(null);
+        setResult('Practice cancelled. No one was contacted.');
+      }}>Cancel practice</button>
+    </>}
+    <p role="status">{result}</p>
+  </article>;
 }
 
 function TripPlanner({country}:{country:string}) {
@@ -163,7 +200,7 @@ function downloadContact(contact:Contact) {
 export function SafetyExtras({contacts,country,emergency,onContacts}:{contacts:Contact[];country:string;emergency:string|null;onContacts:(c:Contact[])=>void}){
  const [checked,setChecked]=useState<Record<string,boolean>>(()=>read('sos_checklist',{})),[medical,setMedical]=useState(()=>read<string>('sos_medical','')),[includeMedical,setIncludeMedical]=useState(false),[editing,setEditing]=useState<string|null>(null),[name,setName]=useState(''),[phone,setPhone]=useState(''),[notice,setNotice]=useState('');
  const save=(key:string,value:unknown)=>{try{localStorage.setItem(key,JSON.stringify(value));}catch{setNotice('Browser storage is unavailable. Changes may not survive closing this page.');}};
- return <section className="safety-extras"><TripPlanner country={country}/><h2>Personal readiness checklist</h2><p>{checklist.filter(t=>checked[t.id]).length} of {checklist.length} self-marked tasks. This is a personal reminder, not a safety assessment.</p><div className="checklist">{checklist.map(t=><label key={t.id}><input type="checkbox" checked={!!checked[t.id]} onChange={e=>{const next={...checked,[t.id]:e.target.checked};setChecked(next);save('sos_checklist',next);}}/>{t.label}</label>)}</div><button onClick={()=>{setChecked({});save('sos_checklist',{});}}>Reset checklist</button>
+ return <section className="safety-extras"><TripPlanner country={country}/><PracticeDrill/><h2>Personal readiness checklist</h2><p>{checklist.filter(t=>checked[t.id]).length} of {checklist.length} self-marked tasks. This is a personal reminder, not a safety assessment.</p><div className="checklist">{checklist.map(t=><label key={t.id}><input type="checkbox" checked={!!checked[t.id]} onChange={e=>{const next={...checked,[t.id]:e.target.checked};setChecked(next);save('sos_checklist',next);}}/>{t.label}</label>)}</div><button onClick={()=>{setChecked({});save('sos_checklist',{});}}>Reset checklist</button>
  <h2>Edit trusted contacts</h2>{contacts.length?contacts.map(c=><div className="contact-edit-row" key={c.id}><span>{c.name} · {c.phone}</span><button onClick={()=>{setEditing(c.id);setName(c.name);setPhone(c.phone);}}>Edit</button><button onClick={()=>{setNotice(downloadContact(c)?'Contact file prepared for import.':'This contact does not have a valid phone number.');}}>Download contact</button></div>):<p>Add a trusted contact above to get started.</p>}
  {editing&&<form className="contact-form" onSubmit={e=>{e.preventDefault();if(!name.trim()||!/^\+?[0-9 ()-]{3,25}$/.test(phone)){setNotice('Enter a name and valid phone number.');return;}onContacts(contacts.map(c=>c.id===editing?{...c,name:name.trim(),phone:phone.trim(),...(phone.trim()!==c.phone?{alertConsent:false,methods:[]}: {})}:c));setEditing(null);}}><input aria-label="Edit contact name" value={name} maxLength={100} onChange={e=>setName(e.target.value)}/><input aria-label="Edit contact phone" value={phone} onChange={e=>setPhone(e.target.value)}/><button>Save changes</button><button type="button" onClick={()=>setEditing(null)}>Cancel</button></form>}
  <h2>Printable emergency card</h2><p>A small card for your wallet or family. Print it or choose Save as PDF in your browser’s print dialog.</p><label className="toggle"><input type="checkbox" checked={includeMedical} onChange={e=>setIncludeMedical(e.target.checked)}/> Include optional medical notes on the printed card</label><textarea aria-label="Private medical notes for emergency card" placeholder="Optional allergies or other details you choose to include" value={medical} maxLength={1000} onChange={e=>{setMedical(e.target.value);save('sos_medical',e.target.value);}}/><p className="footnote">These browser notes stay in this browser’s local storage, which is not encrypted by this website. Include only what you are comfortable storing here.</p>
