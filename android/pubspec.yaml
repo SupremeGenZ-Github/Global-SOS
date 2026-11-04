@@ -1,0 +1,33 @@
+name: global_sos_ai
+description: Government-source emergency contacts and personal safety tools.
+publish_to: none
+version: 0.5.0+7
+environment:
+  sdk: '>=3.8.0 <4.0.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  http: 1.5.0
+  sqflite: 2.4.2
+  path: 1.9.1
+  path_provider: 2.1.5
+  flutter_secure_storage: 9.2.4
+  shared_preferences: 2.5.3
+  url_launcher: 6.3.2
+  geolocator: 14.0.2
+  crypto: 3.0.6
+  llama_flutter_android: 0.2.6
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: 5.0.0
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/directory.json
+    - assets/languages.json
+    - assets/intent-model.json
+    - assets/categories.json
+    - assets/assistant-faq.json
+    - assets/model.json
+    - assets/countries.geojson
