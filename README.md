@@ -1,160 +1,60 @@
 # Global SOS v4.1
 
-[PostgreSQL setup and connection repair](Global-SOS-AI-Full-Project/docs/V41-SETUP.md) · [Source](Global-SOS-AI-Full-Project)
+Connection recovery, 32-language core navigation, clearer online status and an emergency-siren website interface. [Read the setup guide](docs/V41-SETUP.md).
 
 # Global SOS v4
 
-The v4 source connects the native Android app to **https://global-sos.onrender.com** automatically, adds SOS permission choices, fresh-location trusted alerts, optional SIM SMS, contact import, clearer status and updated UI.
+Native Android and web safety tools connected to https://global-sos.onrender.com.
 
-- [v4 setup, PostgreSQL and messaging configuration](Global-SOS-AI-Full-Project/docs/V4-SETUP.md)
-- [v4 source](Global-SOS-AI-Full-Project)
-- [Android builds and validation](https://github.com/SupremeGenZ-Github/Global-SOS/actions/workflows/v4.yml)
+See [v4 setup and limitations](docs/V4-SETUP.md) for SOS permissions, trusted-contact automation, PostgreSQL, Render configuration and Android builds.
 
-Emergency calls open the phone dialer after five seconds; Android requires **Call** confirmation.
-Automatic alerts require consent, permitted contacts and an enabled sending method.
-The website APK remains v3 until a verified v4 binary is staged. Current build results are in Actions.
+# Global SOS AI — v0.3.0
 
----
+One Tap. One Conversation. Help Anywhere.
 
-# Global SOS AI
+This is a development release of a connected Flutter Android app, React/TypeScript website and Express/PostgreSQL API. **It is not certified for emergency dispatch or production reliance.** The directory works without an AI key. Calling and message buttons open external apps; they do not confirm connection or delivery.
 
-**One Tap. One Conversation. Help Anywhere.**
+## New in 0.3
 
-Global SOS AI combines a Flutter Android app, a React website and a Node.js API to help people find government-source emergency and specialist contacts. The Android directory works offline. Optional server features add approved directory updates, private location-sharing sessions, online AI routing and trusted-contact alerts.
+The website now has a public **/download** page and serves the actual APK without a ChatGPT login. The full and Render ZIPs include checked Android release parts; build/start reconstructs and validates the download automatically. Keep the releases/android directory when uploading the source to GitHub. No database or API key is required for downloads.
 
-**Previous packaged release: 0.3.0 · Development/test signed · ARM64 Android 8.0+**
+Personal readiness checklists are available on Android and the website. The website also adds printable emergency cards, contact editing, favorites-only filtering, sorting and setup diagnostics. See [the 0.3 upgrade guide](docs/UPGRADE-v0.3.md).
 
-> This project is not an emergency dispatch service. Opening a dialer or message composer does not confirm connection or delivery. Physical-phone operation and live messaging delivery have not been independently verified.
+## Upgrade from 0.1
 
-## Contents
+Read [the upgrade and provider configuration guide](docs/UPGRADE-v0.2.md). The SOS button now opens the native emergency dialer after five seconds. New source-checked specialist contacts, messaging channels, regional filtering, voice controls and country suggestions are included. See [the complete feature status](docs/FEATURE_STATUS.md) for implementation and device-validation boundaries.
 
-- [Features](#features)
-- [Directory coverage](#directory-coverage)
-- [Architecture](#architecture)
-- [Quick start](#quick-start)
-- [GitHub setup](#github-setup)
-- [Render deployment](#render-deployment)
-- [Environment variables](#environment-variables)
-- [PostgreSQL](#postgresql)
-- [Public APK download page](#public-apk-download-page)
-- [Android installation and connection](#android-installation-and-connection)
-- [SOS behavior](#sos-behavior)
-- [Offline and online AI](#offline-and-online-ai)
-- [Trusted-contact provider alerts](#trusted-contact-provider-alerts)
-- [Directory administration](#directory-administration)
-- [Android builds and signing](#android-builds-and-signing)
-- [Testing](#testing)
-- [Troubleshooting](#troubleshooting)
-- [Privacy and limitations](#privacy-and-limitations)
-- [License](#license)
+## What is implemented
 
-## Features
+- Government-page sourced directory bundled into Android; SQLite stores approved synchronized snapshots atomically. All 193 UN member states are selectable, with extra territories. A country entry does not imply verified contact coverage.
+- Telephone, SMS and officially published WhatsApp links. Email and web channels are seeded where government sources publish them.
+- Search/category/channel filtering, favorites, country confirmation and accessible navigation.
+- Offline rules plus optional real llama.cpp model inference on ARM64 Android. The model performs **intent classification**, not medical advice or a general conversational tutor. Inference output is reduced to an allowed category; model-generated contacts are never displayed.
+- Optional server-side OpenAI-compatible model routing, consent switch, timeouts, rate limits and local fallback.
+- SOS countdown, cancel, local history, GPS capture, encrypted Android trusted-contact storage, message composers and Mark Safe.
+- Opt-in foreground location sharing through private capability-protected server sessions. No account is required. Links expire in one hour; Mark Safe/Cancel erases positions.
+- Administrator proposal/review queue, independent reviewer/publisher tokens, immutable previous record revisions, atomic directory version increments and stale-review rejection.
+- Government source page-change monitoring with robots checks. Changes queue for review and never publish contact data automatically.
 
-### Android
+See `TEST_REPORT.md` for executed checks, `docs/LIMITATIONS.md` for unimplemented requirements and `HELPLINE_SOURCES.md` for current coverage. Source checking is not live-service testing.
 
-- Bundled emergency directory, with SQLite storage for synchronized snapshots.
-- Country, category, channel and regional filtering; favorite services.
-- Telephone, SMS, WhatsApp, email and web actions where officially published.
-- Five-second SOS countdown with Cancel and a native emergency-dialer shortcut.
-- Optional GPS capture and foreground private location sharing.
-- Encrypted trusted contacts, optional medical notes, personal checklist and session history.
-- Optional local LLM intent routing, with deterministic fallback when no model is loaded.
-- Android voice input and text-to-speech controls, subject to installed engines and language support.
-- Light theme, high contrast and silent-interface controls.
-- Shortcut to the configured website's APK download page.
-
-### Website
-
-- Responsive emergency directory and assistant interface.
-- Search, category/channel/region filters, favorites-only view, sorting and filter reset.
-- Personal contact management and editing.
-- Personal readiness checklist.
-- Printable emergency card; optional medical notes appear only when explicitly included.
-- Public APK download page with version, size, compatibility, checksum and installation instructions.
-- Server, database/directory and APK availability checks.
-- Administrator proposal and publication interface.
-
-### Backend
-
-- Express REST API serving the built website and Android clients.
-- Read-only directory mode without a database.
-- Optional PostgreSQL persistence, additive migrations and versioned synchronization.
-- Independent reviewer/publisher credentials, revision history and stale-review rejection.
-- Government-page change monitoring that queues changes for human review.
-- Capability-protected SOS sessions with one-hour expiry and opt-in location updates.
-- Optional Twilio SMS/approved WhatsApp-template and Resend email adapters for trusted contacts.
-- Input validation, parameterized SQL, rate limits, CORS controls and security headers.
-
-## Directory coverage
-
-The bundled 0.3 directory contains:
-
-| Item | Count |
-|---|---:|
-| Services | 525 |
-| Communication channels | 625 |
-| Telephone channels | 548 |
-| SMS channels | 12 |
-| WhatsApp channels | 9 |
-| Email channels | 16 |
-| Web channels | 40 |
-| UN member countries with at least one record | 186 |
-| Additional territories with records | 11 |
-
-All 193 UN member states are selectable. A country being selectable does not mean that every category or local service has been verified. National primary-service records exist for 184 UN members; some other records have regional restrictions.
-
-Contact details originate from government-operated pages. Some services are operated by organizations listed on those government pages. Many primary emergency numbers are sourced from UK FCDO travel guidance, rather than each country's own government. Cards retain source URLs, checking dates and jurisdiction notes.
-
-Specialist coverage remains uneven. Missing WhatsApp numbers, email addresses or emergency numbers are not invented to fill gaps. Source-page checking does not establish operational availability. See [HELPLINE_SOURCES.md](HELPLINE_SOURCES.md).
-
-## Architecture
-
-| Component | Technology | Responsibility |
-|---|---|---|
-| Android application | Flutter/Dart | Offline directory, local safety data and device actions |
-| Website | React, TypeScript, Vite | Browser interface and APK download page |
-| API | Node.js, Express | Shared directory, administration, sessions and optional providers |
-| Central database | PostgreSQL | Approved data, revisions, review queue and private sessions |
-| Android directory storage | SQLite | Offline synchronized snapshots |
-| Android private storage | Encrypted secure storage | Trusted contacts, notes and personal safety data |
-| Optional local model | SmolLM2 GGUF through llama.cpp | Intent classification |
-
-Android and the website communicate with the backend API. **Database credentials belong on the server; Android never connects directly to PostgreSQL.**
+## Folder layout
 
 ```text
-android/                 Flutter project; native project is android/android/
-website/                 React website and static assets
-backend/                 Express API, persistence and source monitoring
-database/                Additive SQL migration
-shared/                  Directory, categories and app-guide data
-releases/android/        Verified APK release parts and manifest
-scripts/                 Build, release preparation and verification helpers
-offline-model/           Model documentation and optional bundling helpers
-tests/                   Backend/API/database/download tests
-docs/                    Upgrade guides, feature status and test evidence
-.github/workflows/       Android builds and web/backend checks
-render.yaml              Render deployment configuration
-.env.example             Environment-variable reference
+android/             Flutter project (native Android project is android/android/)
+website/             React + TypeScript + Vite
+backend/             Express API, PostgreSQL adapter, source monitor
+database/            Additive SQL migration
+shared/              Directory snapshot and category definitions
+offline-model/       Model installation notes and preparation script
+tests/               API, database and safety tests
+docs/                API, limitations, deployment and test evidence
+.github/workflows/   Android builds and web/backend checks
 ```
 
-The Render-only package omits Android source and Android build automation. Use the **full project package** for a GitHub repository that should also build the Android app.
+## Run the website locally
 
-## Quick start
-
-Use the tested Node.js version **24.21.0**. Run commands from the project root containing `package.json`.
-
-1. Copy `.env.example` to `.env`.
-2. For local browsing, use these settings:
-
-```env
-NODE_ENV=development
-PORT=3000
-APP_BASE_URL=http://localhost:3000
-CORS_ORIGINS=http://localhost:3000
-AI_PROVIDER=none
-```
-
-Leave `DATABASE_URL` unset for read-only directory mode.
+Install Node.js 24.21.0, extract the full or Render source ZIP, then run in its root:
 
 ```sh
 npm ci --include=dev
@@ -162,312 +62,87 @@ npm run build
 npm start
 ```
 
-Open `http://localhost:3000` and `http://localhost:3000/download`.
+Open `http://localhost:3000`. With no `DATABASE_URL`, the directory and chat routing use a read-only bundled snapshot. Database-backed administrative updates and live sessions return an explicit unavailable response. For local browser POST requests, copy `.env.example` to `.env`, set `APP_BASE_URL=http://localhost:3000`, and `CORS_ORIGINS=http://localhost:3000`.
 
-The build and startup scripts automatically prepare the bundled APK download. A missing release shows an unavailable state; a corrupt release fails its integrity check.
-
-## GitHub setup
-
-1. Create a repository and extract the supplied full project or Render ZIP.
-2. Upload the **contents inside** the extracted folder. `package.json`, `package-lock.json` and `render.yaml` must be at the repository root.
-3. Keep `releases/android/`, including every release part and `release.json`.
-4. Keep the supplied `README.md`, `LICENSE`, `.gitignore` and `.env.example`.
-5. Include `.github/workflows/` when using the full project and Android build automation.
-
-When creating the repository, you can leave GitHub's README, license and `.gitignore` initialization options blank and upload the supplied files.
-
-Do not commit `.env`, `node_modules`, database passwords, provider keys, signing keystores or generated build caches. The supplied `.gitignore` covers these items. The checked APK release parts are intentionally included so the website can serve the app after deployment.
-
-## Render deployment
-
-Connect the GitHub repository to a Node web service, or deploy using the supplied `render.yaml` Blueprint.
-
-| Setting | Value |
-|---|---|
-| Runtime | Node |
-| Node version | `24.21.0` |
-| Root directory | Leave blank when `package.json` is at the repository root |
-| Build command | `npm ci --include=dev && npm run build` |
-| Start command | `npm start` |
-| Health-check path | `/health` |
-
-For a basic deployment, set:
-
-```env
-NODE_ENV=production
-NODE_VERSION=24.21.0
-APP_BASE_URL=https://YOUR-SERVICE.onrender.com
-CORS_ORIGINS=https://YOUR-SERVICE.onrender.com
-AI_PROVIDER=none
-```
-
-Replace the example hostname with your actual Render address. Use origins without a trailing slash. The server reads Render's `PORT` and binds to `0.0.0.0`; you normally do not need to override `PORT` there.
-
-For read-only operation, omit `DATABASE_URL` rather than entering a placeholder. The Blueprint includes optional configuration fields for additional features; only supply real values for features you enable.
-
-After deployment:
-
-- `/health` checks that the process is alive.
-- `/ready` reports database/directory readiness.
-- `/download` displays the public Android download page.
-
-Actual deployment to an external Render account has not been tested as part of the local release checks. Sleeping services, network failures and provider availability can affect online features; the Android directory remains available offline.
-
-## Environment variables
-
-Render uses its Environment settings. A physical `.env` file is for local setup and must stay out of Git.
-
-### Application and database
-
-| Variable | Purpose | Required? |
-|---|---|---|
-| `NODE_ENV` | `production` on the deployed server | Recommended |
-| `NODE_VERSION` | Runtime selection; tested with `24.21.0` | Deployment configuration |
-| `PORT` | HTTP listening port; local default is `3000` | Provided by Render |
-| `APP_BASE_URL` | Your website's public origin | Set for the deployment |
-| `CORS_ORIGINS` | Comma-separated allowed browser origins | Set for browser requests |
-| `DATABASE_URL` | PostgreSQL connection string | Only for database-backed features |
-
-### Administration and source monitoring
-
-| Variable | Purpose |
-|---|---|
-| `ADMIN_REVIEW_TOKEN` | Private credential for submitting directory proposals |
-| `ADMIN_PUBLISH_TOKEN` | Different private credential for approving/publishing proposals |
-| `DIRECTORY_UPDATE_INTERVAL` | Monitoring interval in seconds; default `86400`, minimum enforced `3600` |
-| `MONITOR_CONTACT` | Real operator contact required before scheduled source monitoring runs |
-
-Both administrator tokens must be **at least 32 characters** and must be **different**. Generate separate values, for example by running this command twice:
-
-```sh
-node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
-```
-
-Store the output privately in the server environment. Do not put tokens in README examples, public source or screenshots. Administrator tokens are not needed to browse the directory or download the APK.
-
-### Optional online AI
-
-| Variable | Purpose |
-|---|---|
-| `AI_PROVIDER` | `none` or `openai-compatible` |
-| `AI_BASE_URL` | Base API URL of your compatible model service |
-| `AI_MODEL` | Model identifier understood by that service |
-| `AI_API_KEY` | Provider credential, if required |
-| `AI_TIMEOUT_MS` | Request timeout; default `10000` |
-
-### Optional trusted-contact alerts
-
-| Variable | Purpose |
-|---|---|
-| `ALERT_CLIENT_TOKEN` | Separate private alert credential, at least 32 characters |
-| `ALERT_ALLOWED_RECIPIENTS` | Comma-separated exact, consenting phone numbers/email addresses |
-| `TWILIO_ACCOUNT_SID` | Twilio account identifier |
-| `TWILIO_AUTH_TOKEN` | Twilio server credential |
-| `TWILIO_SMS_FROM` | Approved SMS sender |
-| `TWILIO_WHATSAPP_FROM` | Approved WhatsApp sender, including `whatsapp:` prefix |
-| `TWILIO_WHATSAPP_TEMPLATE_SID` | Approved template using message variable `1` |
-| `RESEND_API_KEY` | Resend server credential for email |
-| `ALERT_EMAIL_FROM` | Verified email sender |
-
-Only configure the methods you use. Sender approval, recipient opt-in, country restrictions and provider charges are external requirements. Never add public emergency helplines to the trusted-recipient allowlist.
-
-`SESSION_SECRET` and `JWT_SECRET` are not used by this release. `API_BASE_URL` is an optional Android build-time setting, not a database connection string.
-
-## PostgreSQL
-
-PostgreSQL is **optional** for public browsing and APK downloads. It is required for administrator updates, private server SOS/location sessions and provider-alert records.
-
-1. Create a PostgreSQL database in Neon or Render.
-2. Set the backend's `DATABASE_URL` to the real connection string.
-3. Retain the provider's TLS parameters; do not disable certificate verification.
-4. Restart or redeploy the backend.
-
-Startup applies additive schema preparation and seeds the directory. New source records are added; untouched seed records may be refreshed with revision history. Administrator-approved changes and withdrawals are preserved. Database initialization failure does not reset the database.
-
-For manual preparation:
+To enable writes, set `DATABASE_URL` to your PostgreSQL connection string, retain the provider's TLS parameters, and restart. Startup runs the additive migration and seed automatically. Existing records are preserved: seed insertion uses `ON CONFLICT DO NOTHING`. Failed initialization never resets a database. Manual database preparation:
 
 ```sh
 npm run migrate
 ```
 
-See [DATABASE_SCHEMA.sql](DATABASE_SCHEMA.sql) and [database/001_initial.sql](database/001_initial.sql). Back up an existing production database before upgrades.
+## Render + Neon or Render PostgreSQL
 
-## Public APK download page
+1. Create an empty GitHub repository. Extract the Render or full ZIP and upload its contents so `package.json` and `render.yaml` are at the repository root. Do not upload the ZIP itself as your only repository file. Include hidden `.github` and `.gitignore` files; GitHub's Node `.gitignore` template is appropriate if creating the repository first, but retain this project's supplied file.
+2. Create PostgreSQL in Neon or Render. Copy its application connection string. Keep passwords private; never embed the database URL in Flutter or browser code.
+3. In Render, choose **New → Blueprint** and connect the repository, or use **New → Web Service**, runtime Node, build `npm ci --include=dev && npm run build`, start `npm start`.
+4. Set `DATABASE_URL`, `APP_BASE_URL=https://your-service.onrender.com`, and `CORS_ORIGINS` to that exact website origin. Do not include a trailing slash in origins.
+5. For admin features, use two different randomly generated tokens of at least 32 characters as `ADMIN_REVIEW_TOKEN` and `ADMIN_PUBLISH_TOKEN`. The Blueprint generates them. For source monitoring, set `MONITOR_CONTACT` to a real operator contact, first review applicable government site terms, and set the interval in seconds.
+6. Deploy. `/health` checks that the process is alive. `/ready` checks PostgreSQL if configured. A failed configured database yields 503 readiness; restart/redeploy after repairing connectivity.
+7. In Android Settings, enter the HTTPS Render URL and tap **Synchronize directory**. Alternatively set it in the GitHub build workflow input.
 
-Once deployed, open your website's **`/download`** page. Visitors do not need a ChatGPT account, application account, AI key or database connection to download the installed release.
+The app uses only HTTPS APIs. Android never connects directly to PostgreSQL. Render deployments and external account setup were not performed as part of local packaging. A free web service may sleep; use infrastructure suitable for your actual availability requirements before relying on a hosted emergency-assistance service. Database and model hosting costs are separate.
 
-| Route | Purpose |
-|---|---|
-| `/download` | Download page and installation instructions |
-| `/api/releases/android` | Availability, version, size and checksum metadata |
-| `/downloads/Global-SOS-AI.apk` | Direct APK attachment |
-| `/downloads/Global-SOS-AI.apk.sha256` | SHA-256 checksum file |
+## Build APK and AAB without local Android tools
 
-The full and Render packages include verified APK parts in `releases/android/`. Build/start automatically reconstructs them into `public-downloads/android/` and validates the part and final-file checksums. Keep every part and the manifest when uploading the source. No manual reassembly is required.
+The full source ZIP includes `.github/workflows/build-android.yml`. The workflow is intended for a repository containing the complete monorepo, not just the nested Flutter directory.
 
-The download endpoint supports HEAD and byte-range requests. The service worker excludes APK downloads from caching. Missing or corrupted release data does not produce a working download link.
+1. Upload full project contents to GitHub, including `.github/workflows/` and `android/pubspec.lock`.
+2. Open **Actions → Build Android APK and AAB → Run workflow**. Optionally enter your HTTPS Render URL. Leave production signing off for an installable development artifact.
+3. When successful, open that run and download the `Global-SOS-AI-Android` artifact ZIP. It contains the APK, AAB and checksums.
+4. Transfer the APK to an ARM64 Android 8+ phone and install it after enabling installation from that trusted source. Review permissions on the device. An AAB is for Play distribution and is not directly installable.
 
-To stage a future, signature-verified APK:
+Workflow runs fail on analysis/tests/build errors and do not upload empty files. This package does not claim a remote Actions run has succeeded unless `TEST_REPORT.md` records one.
 
-```sh
-node scripts/stage-android-release.mjs /path/to/Global-SOS-AI.apk /path/to/APK-BUILD-RESULT.json
-npm run prepare:download
-```
+## Local Flutter build
 
-The build metadata must match the APK's SHA-256 and byte size and declare `signature_verified: true`. Commit the updated parts and manifest, then redeploy. Never change metadata to disguise an unverified binary.
+Pinned SDK: Flutter 3.38.10 / Dart 3.10.9, Java 17. Android command-line SDK plus platforms 35 and 36, build tools 36.0.0, NDK 28.2.13676358, CMake 3.22.1. The native model plugin supports **arm64-v8a only** in this release. Tablets and other ABIs have not been validated.
 
-## Android installation and connection
-
-1. Download the APK on an **ARM64 Android 8.0+** phone.
-2. Open the file and, if Android asks, allow installation for the application used to download this trusted file.
-3. Install or update Global SOS AI and confirm your current country.
-4. Use the bundled directory immediately; no `.env`, PostgreSQL connection or AI key is required on the phone.
-5. For connected features, enter your website's **HTTPS base address** in Android Settings and tap **Synchronize directory**. Do not append `/api` or `/download` to that base address.
-6. Optionally download and load the offline model in Settings.
-
-Updates signed with the same key can be installed over the existing app. Changing signing keys may require uninstalling, which can erase local safety data. Retain important contact details before changing installations. The optional model is not included in the APK/AAB.
-
-## SOS behavior
-
-Tap or hold SOS to start a cancellable five-second countdown. Leaving the app during that pending countdown also cancels it.
-
-At zero, the app opens the Android dialer with the current country's verified emergency shortcut. **For India, the shortcut is 112. Press Call in the phone application.** The app does not bypass Android's restrictions on direct emergency calling.
-
-The dialer action is initiated before storage, GPS or backend work. A failed backend cannot block that shortcut. Opening the dialer does not confirm connection. Countries without an available national shortcut show an explicit limitation instead of receiving another country's number.
-
-Trusted-contact provider alerts are separate from public emergency calling. Mark Safe and Cancel end local/server session activity and remove stored server positions; they cannot recall messages already submitted to a provider.
-
-## Offline and online AI
-
-### Offline
-
-| Property | Value |
-|---|---|
-| Model | `HuggingFaceTB/SmolLM2-360M-Instruct-GGUF` |
-| Quantization | Q8_0 |
-| Revision | `593b5a2e04c8f3e4ee880263f93e0bd2901ad47f` |
-| Download size | 386,404,992 bytes |
-| License | Apache-2.0 |
-| Runtime | `llama_flutter_android` 0.2.6 / llama.cpp |
-| Language scope | English-focused; multilingual routing is not validated |
-
-Download and load the model in Android Settings. The app checks its SHA-256 before loading it. Model metadata is recorded in `android/assets/model.json`.
-
-The local model classifies intent. Contact values come from the verified directory, never generated model text. If the model is absent, fails to load or times out, deterministic routing remains available. Basic app guidance, greetings and supported arithmetic do not require an LLM. Browser offline routing uses rules and app-guide responses; it does not run the Android local model.
-
-See [offline-model/README.md](offline-model/README.md) for the optional model-inclusive packaging route. Real on-device inference and memory/thermal behavior remain untested.
-
-### Online
-
-Configure your own OpenAI-compatible model service through the server environment. For example:
-
-```env
-AI_PROVIDER=openai-compatible
-AI_BASE_URL=https://YOUR-MODEL-HOST/v1
-AI_MODEL=YOUR_MODEL_IDENTIFIER
-AI_API_KEY=YOUR_PRIVATE_PROVIDER_KEY
-AI_TIMEOUT_MS=10000
-```
-
-The online model service runs separately from the web service unless you intentionally host both together. `localhost` on Render means that Render service itself, not your personal computer. Use a suitable authenticated HTTPS model endpoint for a remote host.
-
-Online routing sends the current message after user consent. Provider failure falls back to local routing. A paid AI key is not required for directory use. The web service does not automatically install or host an LLM.
-
-## Trusted-contact provider alerts
-
-To enable optional automatic trusted-contact alerts:
-
-1. Configure a healthy PostgreSQL backend and the relevant provider variables.
-2. Obtain the recipient's agreement and add their exact international phone number or email to `ALERT_ALLOWED_RECIPIENTS`.
-3. In Android, add the person in **My Safety**, confirm their consent and select permitted methods.
-4. Enter the separate `ALERT_CLIENT_TOKEN` in My Safety; it is stored encrypted on the device.
-5. Enable automatic trusted-contact alerts if desired.
-
-Provider credentials remain on the server. The phone receives only the private client token used for this feature. Location is included only after consent and capture/sharing; medical notes are not automatically attached.
-
-Each recipient/method is submitted once per SOS session. Refresh provider status for later delivery information. **Accepted, queued, sent or unknown does not mean delivered.** An ambiguous timeout is not automatically retried. If providers are unavailable, use the native contact composers and complete the message yourself.
-
-Live provider delivery has not been tested. See [docs/UPGRADE-v0.2.md](docs/UPGRADE-v0.2.md) for detailed configuration.
-
-## Directory administration
-
-The Admin page uses two separate roles:
-
-| Credential | Role |
-|---|---|
-| `ADMIN_REVIEW_TOKEN` | Submit a proposed record change |
-| `ADMIN_PUBLISH_TOKEN` | Review, approve/publish, or reject a proposal |
-
-Load a record, retain its approved source identity and exact source URL, make the proposed change and submit it with the reviewer credential. Sign out, use the different publisher credential, check the government evidence and jurisdiction, then approve or reject with review notes.
-
-Publication is versioned and preserves history. Stale proposals are rejected. New source admission is a manually vetted maintainer/database action; an official-looking domain is not automatically trusted.
-
-Source monitoring respects robots directives and queues page changes for review. It does not automatically publish extracted contact numbers. Set a real `MONITOR_CONTACT` and review relevant source-site terms before enabling scheduled checks.
-
-```sh
-npm run monitor
-```
-
-## Android builds and signing
-
-### GitHub Actions
-
-Use the **full project** repository, including `.github/workflows/build-android.yml` and `android/pubspec.lock`.
-
-Run the **Build Android APK and AAB** workflow from the repository's Actions area. Optionally supply your HTTPS backend URL. Successful runs upload a `Global-SOS-AI-Android` artifact containing APK, AAB and checksums. No successful remote workflow execution is claimed by the local release report.
-
-Without production signing credentials, the artifacts are development/test signed. An AAB is for distribution tooling; it is not directly installable like an APK.
-
-For production signing, retain a permanent keystore and configure these repository Actions secrets:
-
-- `KEYSTORE_BASE64`
-- `KEY_ALIAS`
-- `KEYSTORE_PASSWORD`
-- `KEY_PASSWORD`
-
-Enable production signing when running the workflow. Do not commit the keystore or its passwords. Keep the signing identity for future app updates.
-
-### Local build
-
-Pinned toolchain: Flutter **3.38.10**, Dart **3.10.9**, Java **17**, Android SDK platforms **35/36**, build tools **36.0.0**, NDK **28.2.13676358**, CMake **3.22.1**.
+The supplied native Android project is complete. Only if regenerating an absent platform directory, run `npm run prepare:android` from the monorepo root. Then:
 
 ```sh
 cd android
 flutter pub get --enforce-lockfile
 flutter analyze
 flutter test
-flutter build apk --release --target-platform android-arm64 --dart-define=API_BASE_URL=https://YOUR-SERVICE.onrender.com
-flutter build appbundle --release --target-platform android-arm64 --dart-define=API_BASE_URL=https://YOUR-SERVICE.onrender.com
+flutter build apk --release --target-platform android-arm64 --dart-define=API_BASE_URL=https://your-service.onrender.com
+flutter build appbundle --release --target-platform android-arm64 --dart-define=API_BASE_URL=https://your-service.onrender.com
 ```
 
-Outputs, relative to the repository root:
+Outputs: `android/build/app/outputs/flutter-apk/app-release.apk` and `android/build/app/outputs/bundle/release/app-release.aab`, relative to the monorepo root. Android runtime permissions, actual model inference, calls and device installation require separate device validation.
 
-```text
-android/build/app/outputs/flutter-apk/app-release.apk
-android/build/app/outputs/bundle/release/app-release.aab
+## Signing
+
+Without production credentials, release-mode builds use the generated **development debug key**. They must be labeled TEST-SIGNED and are unsuitable for Play publication or a stable production update identity. Keep an existing key if you want future test APKs to update an installed app; replacing the key requires uninstalling first, which can erase local data.
+
+Create and retain a permanent upload keystore on your own secure computer:
+
+```sh
+keytool -genkeypair -v -keystore upload.jks -keyalg RSA -keysize 3072 -validity 10000 -alias upload
 ```
 
-Local production signing uses `KEYSTORE_PATH`, `KEY_ALIAS`, `KEYSTORE_PASSWORD` and `KEY_PASSWORD`; all four are required. With no production configuration, builds use the development signing setup.
+Back up the keystore and passwords securely. Never commit them. In GitHub repository Actions secrets, configure `KEYSTORE_BASE64` (base64 contents of the keystore), `KEY_ALIAS`, `KEYSTORE_PASSWORD`, and `KEY_PASSWORD`. Run the workflow with production signing enabled. Locally, set `KEYSTORE_PATH`, `KEY_ALIAS`, `KEYSTORE_PASSWORD`, and `KEY_PASSWORD`. All four are required. Use Play App Signing according to Google's documentation and review current Play policies, privacy declarations and target-SDK requirements before publication.
 
-The supplied native Android project is included. `npm run prepare:android` is only needed if regenerating an absent platform project.
+## AI configuration
 
-## Testing
+Offline model: `HuggingFaceTB/SmolLM2-360M-Instruct-GGUF`, Q8_0, exact revision and checksum in `android/assets/model.json`. Size: 386,404,992 bytes, Apache-2.0. Runtime: `llama_flutter_android` 0.2.6 / llama.cpp, CPU inference. Download and load it from Android Settings. Integrity is verified before loading. Missing model, download failure and inference timeout retain the deterministic directory router. English-focused; multilingual performance is not validated. No API key is required. See `offline-model/README.md`.
 
-Recorded local checks for release 0.3:
+Online mode requires your own OpenAI-compatible model service. Run the same model through a compatible llama.cpp server on a suitable separate machine:
 
-| Check | Result |
-|---|---|
-| Flutter static analysis | Passed |
-| Flutter unit/widget tests | 11 passed |
-| Backend/API/PostgreSQL-engine/download tests | 18 passed |
-| Website TypeScript and production build | Passed |
-| APK and AAB compilation | Passed |
-| APK and AAB signature verification | Passed with development/test signing |
-| Actual locally served APK | HTTP download bytes matched the verified release SHA-256 |
+```sh
+llama-server -m smollm2-360m-instruct-q8_0.gguf -c 2048 --host 127.0.0.1 --port 8080
+```
 
-Backend database tests use PGlite's PostgreSQL engine. Provider adapters use mocked responses. SOS tests use mocked dialer launches. No real emergency calls or provider messages were sent during testing.
+Set `AI_PROVIDER=openai-compatible`, `AI_BASE_URL=http://127.0.0.1:8080/v1`, `AI_MODEL=smollm2-360m-instruct`, optional `AI_API_KEY`, and `AI_TIMEOUT_MS=10000`. For a remotely hosted model, use HTTPS and authentication. Do not point a Render service at `localhost` unless the model actually runs in that same service; use its secured network endpoint instead. This web service does not install or host a model automatically, and a free 512 MB web-service instance is not a practical default model host.
 
-To run checks:
+Online requests send only the current chat message and routing instructions. No conversation storage or location is added. Emergency rules take priority over model inference. The UI reports the actual router used.
+
+## Administrator review
+
+Open the website's Admin page. Use the reviewer token to load an existing record, edit its JSON, retain its approved `source_id` and exact `source_url`, and submit. Unknown categories, invalid contact formats and unknown/unapproved sources are rejected. Government domains must be manually vetted before a maintainer approves a new source in PostgreSQL; a domain's appearance alone is not evidence.
+
+Sign out and use the **different publisher token**. Check the government page yourself, jurisdiction, immediate-emergency suitability and all channels, add evidence notes and approve. Publication records history and increments the directory version in one transaction. Stale pending proposals are rejected. A page-change alert is not a contact proposal and cannot directly publish numbers. Resolve it after inspection, then submit a separate record proposal if an update is needed.
+
+## Checks
 
 ```sh
 npm test
@@ -475,46 +150,12 @@ npm run build
 npm audit --omit=dev
 ```
 
-For Flutter, run `flutter analyze` and `flutter test` inside `android/`.
+The database tests use PGlite's actual PostgreSQL engine in-process. They do not prove connectivity to an external Neon/Render database. See `docs/API.md`, `SECURITY.md`, `PRIVACY.md`, and the execution evidence in `docs/evidence/`.
 
-**Not established by these checks:** physical-phone installation/upgrade, actual voice/GPS/model performance, live provider delivery, external Neon/Render connectivity, browser interaction/print layout, remote GitHub Actions execution, Play publication or independent security/legal certification.
+### Global SOS v5 safety tools
 
-See [TEST_REPORT.md](TEST_REPORT.md) and [docs/FEATURE_STATUS.md](docs/FEATURE_STATUS.md).
+Open **My Safety** on web or Android to create an inbox and share its invite with a trusted contact. Keep the inbox owner key private. The invite can receive alerts but cannot read inbox contents. Recipients check the inbox in the app or web. Inbox messages expire after seven days. Missed check-ins are queued by PostgreSQL and processed while the backend is running. Use an always-running deployment for timely check-ins.
 
-## Troubleshooting
+SMS and WhatsApp compose screens require the user to send the message. Existing opt-in automatic alert channels require their configured Android permissions or server provider credentials. The general share sheet hands the text to the chosen app. Provider acceptance, inbox storage and recipient opening have separate meanings.
 
-| Problem | What to check |
-|---|---|
-| Download page says no APK is installed | Keep `releases/android/release.json` and every APK part in the repository; run `npm run prepare:download` and redeploy/restart |
-| APK part integrity check fails | Restore the unmodified parts and matching manifest from the same release; do not combine versions |
-| Render cannot find `package.json` | Upload extracted project contents at the repository root, or correct the service's root directory |
-| Browser requests show an origin error | Set `APP_BASE_URL` and `CORS_ORIGINS` to the exact site origin, without a trailing slash |
-| `/ready` returns 503 | Repair the configured database connection and TLS settings, then restart; do not replace the URL with a dummy value |
-| Admin or private-session actions are unavailable | These need healthy PostgreSQL; read-only mode intentionally does not support writes |
-| APK cannot synchronize | Enter the HTTPS website base URL in Android Settings, with no `/api` suffix |
-| Older contacts remain after an update | Deploy the matching updated backend, then synchronize; server-approved snapshots are preserved |
-| Model is unavailable | Download and load it in Android Settings; verify storage/memory compatibility; fallback routing still works |
-| Voice controls do not work | Check installed Android speech engines and language packs; type the request instead |
-| WhatsApp/email action does not open | Check the verified channel and an installed compatible handler; completion still happens in that external app |
-| Provider alert is rejected | Check the private alert token, contact consent, permitted methods, exact recipient allowlist and provider configuration |
-| An update will not install over the old app | Check package identity, device compatibility and signing-key continuity before uninstalling or deleting data |
-
-## Privacy and limitations
-
-- Android private contacts, medical notes and checklist data use encrypted local storage.
-- Browser safety data uses local storage; it is not encrypted by the website.
-- Offline chat is not sent to the backend. Online routing sends the current request after consent.
-- Location uploads require consent and a private session. Links expire after one hour; Mark Safe/Cancel removes stored positions. Sharing is foreground-only.
-- Optional Android geocoding can send coordinates to its provider; it is disabled until enabled. Coarse offline country suggestions require manual confirmation, especially near borders/coasts and small territories.
-- Android recognition prefers offline mode but follows the installed provider's network/privacy settings. Installed voice language support does not establish multilingual LLM accuracy.
-- Optional medical-card notes print only when explicitly included. Review a card before sharing it.
-- Push notifications, account registration and cross-device account synchronization remain unimplemented. Worldwide specialist coverage is incomplete.
-- No automatic public emergency dispatch, unrestricted emergency calling, background tracking or guaranteed communication delivery is claimed.
-
-Review and complete operator details in [PRIVACY.md](PRIVACY.md), [TERMS.md](TERMS.md) and [SECURITY.md](SECURITY.md) before public distribution. See [docs/LIMITATIONS.md](docs/LIMITATIONS.md) for remaining boundaries and [docs/UPGRADE-v0.3.md](docs/UPGRADE-v0.3.md) for the latest upgrade guide.
-
-## License
-
-Application source is distributed under the [MIT License](LICENSE). Dependencies, model weights and source datasets retain their respective licenses. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-
-Government-source attribution does not imply government endorsement of this application.
+The desktop console is available at /desktop and the phone layout at /mobile. Location sharing requests a foreground fix on demand and labels older or retained coordinates with their capture time. Medical notes stay local unless the user explicitly exports or shares them. The offline intent router uses 200 synthetic training examples across 25 categories and falls back to directory choices when uncertain.
