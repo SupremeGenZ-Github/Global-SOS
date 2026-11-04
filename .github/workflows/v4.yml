@@ -1,14 +1,14 @@
-name: Global SOS v4.2 checks and Android build
+name: Global SOS v5 checks and Android build
 on:
   push:
-    branches: [codex/global-sos-v41]
+    branches: [codex/global-sos-v5]
   pull_request:
     branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: v42-${{ github.ref }}
+  group: v5-${{ github.ref }}
   cancel-in-progress: false
 defaults:
   run:
@@ -63,27 +63,27 @@ jobs:
       - name: Verify artifacts
         run: |
           mkdir -p artifacts
-          cp android/build/app/outputs/flutter-apk/app-release.apk artifacts/Global-SOS-v42-TEST-SIGNED.apk
-          cp android/build/app/outputs/bundle/release/app-release.aab artifacts/Global-SOS-v42-TEST-SIGNED.aab
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose artifacts/Global-SOS-v42-TEST-SIGNED.apk
-          jarsigner -verify artifacts/Global-SOS-v42-TEST-SIGNED.aab
+          cp android/build/app/outputs/flutter-apk/app-release.apk artifacts/Global-SOS-v5-TEST-SIGNED.apk
+          cp android/build/app/outputs/bundle/release/app-release.aab artifacts/Global-SOS-v5-TEST-SIGNED.aab
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose artifacts/Global-SOS-v5-TEST-SIGNED.apk
+          jarsigner -verify artifacts/Global-SOS-v5-TEST-SIGNED.aab
           cd artifacts
           sha256sum *.apk *.aab > SHA256SUMS.txt
       - uses: actions/setup-node@v4
         with:
           node-version: '24.21.0'
-      - name: Package website with verified v4 APK
+      - name: Package website with verified v5 APK
         env:
           PACKAGE_OUTPUT_DIR: ${{ github.workspace }}/Global-SOS-AI-Full-Project/artifacts/packages
         run: |
           npm ci --include=dev
-          node scripts/stage-ci-release.mjs artifacts/Global-SOS-v42-TEST-SIGNED.apk
+          node scripts/stage-ci-release.mjs artifacts/Global-SOS-v5-TEST-SIGNED.apk
           npm test
           npm run build
           node scripts/verify-public-download.mjs
           node scripts/package.mjs
       - uses: actions/upload-artifact@v4
         with:
-          name: Global-SOS-v42-Android
+          name: Global-SOS-v5-Android
           path: Global-SOS-AI-Full-Project/artifacts/
           if-no-files-found: error

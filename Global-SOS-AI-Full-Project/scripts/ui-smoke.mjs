@@ -68,4 +68,15 @@ try {
  assert.equal(await fallbackPage.locator('.conversation .service-card').count(),0,'server fallback must not revive withdrawn services');
  console.log('PASS: 32-language controls, Telugu labels, Arabic RTL, emergency SVG and cache preservation during PostgreSQL failure');
  await fallbackContext.close();
+ const desktop = await browser.newPage({viewport:{width:1440,height:900}});
+ await desktop.goto(origin+'/desktop');
+ await desktop.getByRole('region',{name:'Desktop safety console'}).waitFor();
+ assert.equal(await desktop.locator('.phone-home').isVisible(),false);
+ await desktop.getByRole('button',{name:'Inbox, check-ins and sharing'}).click();
+ await desktop.getByRole('region',{name:'Safety tools'}).waitFor();
+ await desktop.goto(origin+'/mobile');
+ await desktop.locator('.phone-home').waitFor();
+ assert.equal(await desktop.locator('.desktop-console').isVisible(),false);
+ await desktop.close();
+ console.log('PASS: separate desktop and forced phone layouts, with safety tools linked from desktop');
 } finally {await browser?.close();server.kill();}

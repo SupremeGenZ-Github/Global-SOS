@@ -1,17 +1,252 @@
 {
-  "ambulance": ["person collapsed and cannot wake up", "friend passed out and will not respond", "grandfather suddenly slumped over", "someone fainted and is still unresponsive", "person turning blue and gasping", "family member fell and cannot move", "someone having a seizure shaking on floor", "face drooping and speech slurred"],
-  "fire": ["flames coming from kitchen window", "building filling with smoke", "apartment hallway smells of burning", "sparks and flames from electrical panel", "house engulfed in flames", "smoke coming out of the ceiling", "trapped inside burning building", "kitchen stove flames spreading"],
-  "police": ["stranger broke into my house", "intruder forced open my front door", "someone following me and threatening me", "person threatening me with a knife", "armed stranger blocking my exit", "thief broke into the shop", "someone trying to break down my door", "violent stranger threatening to hurt me"],
-  "domestic": ["my partner controls my money and hurts me", "my spouse hits me and locks me inside", "my husband threatens me at home", "my partner isolates me from my family", "my spouse won't let me leave the house", "my partner keeps hurting me at home", "need a safe shelter away from my partner", "my wife threatens and hits me repeatedly"],
-  "cyber": ["someone stole my online banking login", "i sent money to a fake investment website", "my account was taken over through a fake link", "someone tricked me into sharing a bank code", "unauthorized payment from my bank app", "fake payment link stole my card details", "someone used my stolen login to transfer money", "my digital wallet was emptied after a phishing link"],
-  "road": ["two cars collided and someone is trapped", "vehicle overturned on the highway", "truck hit a cyclist on the road", "car rolled over and blocked the highway", "motorcycle hit another vehicle at junction", "bus overturned and passengers trapped", "driver trapped inside overturned vehicle", "pedestrian hit by a speeding car"],
-  "poison": ["toddler drank cleaning liquid", "someone swallowed bathroom cleaner", "child ate unknown pills", "my dog is fine but my child swallowed detergent", "person drank pesticide by mistake", "child drank bleach from a bottle", "family member took too many tablets", "someone swallowed a toxic household product"],
-  "missing": ["my daughter never returned home and nobody knows where she is", "relative disappeared and we cannot find them", "my father wandered away and has not returned", "my son never came home from school", "family member has disappeared without contact", "my brother never arrived and his whereabouts are unknown", "my elderly relative wandered away from home", "we cannot locate our daughter after school"],
-  "marine": ["sailboat stranded offshore taking on water", "fishing vessel drifting far from shore", "crew stranded offshore with broken engine", "someone swept out to sea by current", "kayaker swept away from the coast", "vessel sinking offshore with people aboard", "sailors stranded at sea after engine failure", "small craft capsized far from shore"],
-  "mountain": ["lost on a remote trail in the hills", "climber stranded on a cliff ledge", "group lost in the woods after dark", "trekker stranded on a ridge with an injured ankle", "lost on a forest trail and cannot find the path", "climber stuck on a steep rock face", "walkers stranded in a remote valley", "hikers lost in woods without a map"],
-  "utilities": ["downed power cable sparking in street", "power line fell across the pavement", "strong gas smell coming from kitchen pipe", "gas odor near the stove pipe", "live power cable lying across the road", "power cable snapped and is sparking", "gas smell inside my house near the meter", "overhead power line fell next to my house"],
-  "consular": ["need my embassy after travel documents were stolen", "citizen stranded overseas needs consulate assistance", "lost travel documents abroad and need embassy help", "need consulate assistance while detained overseas", "emergency travel document from my consulate", "embassy help for citizen stranded abroad", "need to contact my consulate overseas", "citizen overseas without travel documents"],
-  "consumer": ["store sold defective goods and refuses replacement", "merchant refuses warranty on broken product", "seller delivered damaged goods and will not respond", "retailer denies replacement for defective appliance", "company charged twice for the same purchase", "shop refuses to replace faulty product under warranty", "seller sent a broken appliance and refuses replacement", "merchant overcharged on my purchase"],
-  "workplace": ["unsafe machinery at my factory job", "employer removed protective guards from equipment", "factory workers exposed to dangerous fumes", "unsafe working conditions at construction site", "boss refuses protective equipment at work", "machine guards missing on factory equipment", "workers made to handle hazardous chemicals without protection", "construction employer ignores unsafe scaffolding"],
-  "other": ["what time does the shop open", "tell me a joke about cats", "how do i change app settings", "i am learning programming today", "what is the weather forecast", "help me write a school assignment", "how much does this product cost", "show me a recipe for dinner"]
+  "ambulance": [
+    "person collapsed and cannot wake up",
+    "friend passed out and will not respond",
+    "grandfather suddenly slumped over",
+    "someone fainted and is still unresponsive",
+    "person turning blue and gasping",
+    "family member fell and cannot move",
+    "someone having a seizure shaking on floor",
+    "face drooping and speech slurred"
+  ],
+  "fire": [
+    "flames coming from kitchen window",
+    "building filling with smoke",
+    "apartment hallway smells of burning",
+    "sparks and flames from electrical panel",
+    "house engulfed in flames",
+    "smoke coming out of the ceiling",
+    "trapped inside burning building",
+    "kitchen stove flames spreading"
+  ],
+  "police": [
+    "stranger broke into my house",
+    "intruder forced open my front door",
+    "someone following me and threatening me",
+    "person threatening me with a knife",
+    "armed stranger blocking my exit",
+    "thief broke into the shop",
+    "someone trying to break down my door",
+    "violent stranger threatening to hurt me"
+  ],
+  "domestic": [
+    "my partner controls my money and hurts me",
+    "my spouse hits me and locks me inside",
+    "my husband threatens me at home",
+    "my partner isolates me from my family",
+    "my spouse won't let me leave the house",
+    "my partner keeps hurting me at home",
+    "need a safe shelter away from my partner",
+    "my wife threatens and hits me repeatedly"
+  ],
+  "cyber": [
+    "someone stole my online banking login",
+    "i sent money to a fake investment website",
+    "my account was taken over through a fake link",
+    "someone tricked me into sharing a bank code",
+    "unauthorized payment from my bank app",
+    "fake payment link stole my card details",
+    "someone used my stolen login to transfer money",
+    "my digital wallet was emptied after a phishing link"
+  ],
+  "road": [
+    "two cars collided and someone is trapped",
+    "vehicle overturned on the highway",
+    "truck hit a cyclist on the road",
+    "car rolled over and blocked the highway",
+    "motorcycle hit another vehicle at junction",
+    "bus overturned and passengers trapped",
+    "driver trapped inside overturned vehicle",
+    "pedestrian hit by a speeding car"
+  ],
+  "poison": [
+    "toddler drank cleaning liquid",
+    "someone swallowed bathroom cleaner",
+    "child ate unknown pills",
+    "my dog is fine but my child swallowed detergent",
+    "person drank pesticide by mistake",
+    "child drank bleach from a bottle",
+    "family member took too many tablets",
+    "someone swallowed a toxic household product"
+  ],
+  "missing": [
+    "my daughter never returned home and nobody knows where she is",
+    "relative disappeared and we cannot find them",
+    "my father wandered away and has not returned",
+    "my son never came home from school",
+    "family member has disappeared without contact",
+    "my brother never arrived and his whereabouts are unknown",
+    "my elderly relative wandered away from home",
+    "we cannot locate our daughter after school"
+  ],
+  "marine": [
+    "sailboat stranded offshore taking on water",
+    "fishing vessel drifting far from shore",
+    "crew stranded offshore with broken engine",
+    "someone swept out to sea by current",
+    "kayaker swept away from the coast",
+    "vessel sinking offshore with people aboard",
+    "sailors stranded at sea after engine failure",
+    "small craft capsized far from shore"
+  ],
+  "mountain": [
+    "lost on a remote trail in the hills",
+    "climber stranded on a cliff ledge",
+    "group lost in the woods after dark",
+    "trekker stranded on a ridge with an injured ankle",
+    "lost on a forest trail and cannot find the path",
+    "climber stuck on a steep rock face",
+    "walkers stranded in a remote valley",
+    "hikers lost in woods without a map"
+  ],
+  "utilities": [
+    "downed power cable sparking in street",
+    "power line fell across the pavement",
+    "strong gas smell coming from kitchen pipe",
+    "gas odor near the stove pipe",
+    "live power cable lying across the road",
+    "power cable snapped and is sparking",
+    "gas smell inside my house near the meter",
+    "overhead power line fell next to my house"
+  ],
+  "consular": [
+    "need my embassy after travel documents were stolen",
+    "citizen stranded overseas needs consulate assistance",
+    "lost travel documents abroad and need embassy help",
+    "need consulate assistance while detained overseas",
+    "emergency travel document from my consulate",
+    "embassy help for citizen stranded abroad",
+    "need to contact my consulate overseas",
+    "citizen overseas without travel documents"
+  ],
+  "consumer": [
+    "store sold defective goods and refuses replacement",
+    "merchant refuses warranty on broken product",
+    "seller delivered damaged goods and will not respond",
+    "retailer denies replacement for defective appliance",
+    "company charged twice for the same purchase",
+    "shop refuses to replace faulty product under warranty",
+    "seller sent a broken appliance and refuses replacement",
+    "merchant overcharged on my purchase"
+  ],
+  "workplace": [
+    "unsafe machinery at my factory job",
+    "employer removed protective guards from equipment",
+    "factory workers exposed to dangerous fumes",
+    "unsafe working conditions at construction site",
+    "boss refuses protective equipment at work",
+    "machine guards missing on factory equipment",
+    "workers made to handle hazardous chemicals without protection",
+    "construction employer ignores unsafe scaffolding"
+  ],
+  "other": [
+    "what time does the shop open",
+    "tell me a joke about cats",
+    "how do i change app settings",
+    "i am learning programming today",
+    "what is the weather forecast",
+    "help me write a school assignment",
+    "how much does this product cost",
+    "show me a recipe for dinner"
+  ],
+  "child": [
+    "child neglect reported at school",
+    "report suspected child neglect",
+    "child protection for neglected kids",
+    "child being abused by caregiver",
+    "child abuse by a caregiver",
+    "child protection service for neglect",
+    "report child abuse at home",
+    "child left alone by caregiver repeatedly"
+  ],
+  "mental": [
+    "panic attacks and overwhelming anxiety",
+    "anxiety and panic attacks keep recurring",
+    "need mental health support for anxiety",
+    "feeling overwhelmed by depression",
+    "depression and anxiety support service",
+    "mental health crisis and panic",
+    "struggling with depression and hopelessness",
+    "mental health support for panic attacks"
+  ],
+  "trafficking": [
+    "trafficking recruiter confiscated passport",
+    "forced labor recruiter took passport",
+    "workers trapped in forced labor",
+    "human trafficking passport confiscated",
+    "recruiter keeps passport and forces labor",
+    "need human trafficking support",
+    "trafficking and labor exploitation",
+    "worker cannot escape forced labor"
+  ],
+  "railway": [
+    "railway platform incident at station",
+    "train passenger emergency on platform",
+    "railway station platform accident",
+    "train stopped after derailment",
+    "railway train derailment reported",
+    "station staff needed on railway platform",
+    "someone fell onto train tracks",
+    "person on railway tracks by station"
+  ],
+  "senior": [
+    "elder abuse by paid caregiver",
+    "elderly neighbor experiencing elder abuse",
+    "senior neglected in elder care facility",
+    "elder care neglect by caregivers",
+    "senior citizen financial abuse caregiver",
+    "senior support for elder neglect",
+    "elder abuse report at senior home",
+    "elderly person needs senior assistance"
+  ],
+  "disability": [
+    "wheelchair accessibility support service",
+    "disability access problem at public office",
+    "wheelchair user needs disability support",
+    "disability services for inaccessible wheelchair ramps",
+    "support for wheelchair accessibility barriers",
+    "disabled resident denied accessible transport",
+    "disability support for accessible transport",
+    "wheelchair access blocked at public building"
+  ],
+  "flood": [
+    "floodwater rising around our house",
+    "floodwater trapped people upstairs",
+    "flash flood rescue needed",
+    "rising floodwater inside building",
+    "earthquake trapped people in rubble",
+    "earthquake rescue from collapsed rubble",
+    "floodwater has cut off evacuation",
+    "earthquake rubble blocking exits"
+  ],
+  "tourist": [
+    "tourist assistance after luggage theft",
+    "tourist police after bag stolen",
+    "traveler needs tourist information assistance",
+    "tourist support at a holiday resort",
+    "report stolen luggage to tourist police",
+    "tourist assistance for stranded traveler",
+    "holiday traveler needs tourist helpline",
+    "tourist complaint about local travel agency"
+  ],
+  "women": [
+    "women safety help after street harassment",
+    "woman harassed repeatedly on public transit",
+    "womens safety service for harassment",
+    "report sexual harassment on public bus",
+    "woman facing sexual harassment",
+    "women harassment helpline and support",
+    "sexual harassment support for women",
+    "woman needs public harassment support"
+  ],
+  "disaster": [
+    "disaster relief after major cyclone",
+    "evacuation centre during cyclone",
+    "storm disaster relief shelter",
+    "cyclone relief and evacuation support",
+    "disaster management assistance during storm",
+    "evacuation shelter after hurricane",
+    "hurricane disaster evacuation shelter",
+    "disaster relief centre for cyclone survivors"
+  ]
 }
