@@ -26,7 +26,9 @@
         "Offline": "Offline",
         "Current country": "Current country",
         "Help is closer than you think.": "Help is closer than you think.",
-        "Emergency controls": "Emergency controls"
+        "Emergency controls": "Emergency controls",
+        "Find the right service. Make the next step clear.": "Find the right service. Make the next step clear.",
+        "Confirm your country. Describe the help you need.": "Confirm your country. Describe the help you need."
       }
     },
     {
@@ -55,7 +57,9 @@
         "Offline": "ऑफ़लाइन",
         "Current country": "वर्तमान देश",
         "Help is closer than you think.": "मदद आपकी सोच से ज़्यादा करीब है।",
-        "Emergency controls": "आपातकालीन नियंत्रण"
+        "Emergency controls": "आपातकालीन नियंत्रण",
+        "Find the right service. Make the next step clear.": "सही सहायता सेवा खोजें और जानें कि आगे क्या करें।",
+        "Confirm your country. Describe the help you need.": "अपना देश चुनें और बताएं कि आपको किस मदद की ज़रूरत है।"
       }
     },
     {
@@ -84,7 +88,9 @@
         "Offline": "ఆఫ్‌లైన్",
         "Current country": "ప్రస్తుత దేశం",
         "Help is closer than you think.": "మీకు సహాయం దగ్గరలోనే ఉంది.",
-        "Emergency controls": "అత్యవసర నియంత్రణలు"
+        "Emergency controls": "అత్యవసర నియంత్రణలు",
+        "Find the right service. Make the next step clear.": "సరైన సహాయ సేవను కనుగొని, తర్వాత ఏమి చేయాలో తెలుసుకోండి.",
+        "Confirm your country. Describe the help you need.": "మీ దేశాన్ని నిర్ధారించి, మీకు ఎలాంటి సహాయం కావాలో చెప్పండి."
       }
     },
     {
@@ -113,7 +119,9 @@
         "Offline": "இணையமின்றி",
         "Current country": "தற்போதைய நாடு",
         "Help is closer than you think.": "உதவி நீங்கள் நினைப்பதை விட அருகில் உள்ளது.",
-        "Emergency controls": "அவசரக் கட்டுப்பாடுகள்"
+        "Emergency controls": "அவசரக் கட்டுப்பாடுகள்",
+        "Find the right service. Make the next step clear.": "சரியான உதவிச் சேவையைக் கண்டறிந்து, அடுத்து என்ன செய்ய வேண்டும் என்பதைத் தெரிந்துகொள்ளுங்கள்.",
+        "Confirm your country. Describe the help you need.": "உங்கள் நாட்டை உறுதிசெய்து, என்ன உதவி வேண்டும் என்று சொல்லுங்கள்."
       }
     },
     {
@@ -142,7 +150,9 @@
         "Offline": "অফলাইন",
         "Current country": "বর্তমান দেশ",
         "Help is closer than you think.": "সাহায্য আপনার ভাবনার চেয়েও কাছে।",
-        "Emergency controls": "জরুরি নিয়ন্ত্রণ"
+        "Emergency controls": "জরুরি নিয়ন্ত্রণ",
+        "Find the right service. Make the next step clear.": "সঠিক সহায়তা পরিষেবা খুঁজুন এবং পরের পদক্ষেপটি জেনে নিন।",
+        "Confirm your country. Describe the help you need.": "আপনার দেশ নিশ্চিত করুন এবং কী সাহায্য দরকার তা জানান।"
       }
     },
     {
@@ -171,7 +181,9 @@
         "Offline": "ऑफलाइन",
         "Current country": "सध्याचा देश",
         "Help is closer than you think.": "मदत तुमच्या विचारापेक्षा जवळ आहे.",
-        "Emergency controls": "आपत्कालीन नियंत्रणे"
+        "Emergency controls": "आपत्कालीन नियंत्रणे",
+        "Find the right service. Make the next step clear.": "योग्य मदत सेवा शोधा आणि पुढे काय करायचे ते जाणून घ्या.",
+        "Confirm your country. Describe the help you need.": "आपला देश निश्चित करा आणि कोणती मदत हवी ते सांगा."
       }
     },
     {
@@ -200,7 +212,9 @@
         "Offline": "ઑફલાઇન",
         "Current country": "વર્તમાન દેશ",
         "Help is closer than you think.": "મદદ તમારી ધારણા કરતાં નજીક છે.",
-        "Emergency controls": "કટોકટી નિયંત્રણો"
+        "Emergency controls": "કટોકટી નિયંત્રણો",
+        "Find the right service. Make the next step clear.": "યોગ્ય સહાય સેવા શોધો અને આગળ શું કરવું તે જાણો.",
+        "Confirm your country. Describe the help you need.": "તમારો દેશ ખાતરી કરીને જણાવો અને કઈ મદદ જોઈએ તે સમજાવો."
       }
     },
     {
@@ -229,7 +243,9 @@
         "Offline": "ಆಫ್‌ಲೈನ್",
         "Current country": "ಪ್ರಸ್ತುತ ದೇಶ",
         "Help is closer than you think.": "ಸಹಾಯ ನೀವು ಯೋಚಿಸುವುದಕ್ಕಿಂತ ಹತ್ತಿರದಲ್ಲಿದೆ.",
-        "Emergency controls": "ತುರ್ತು ನಿಯಂತ್ರಣಗಳು"
+        "Emergency controls": "ತುರ್ತು ನಿಯಂತ್ರಣಗಳು",
+        "Find the right service. Make the next step clear.": "ಸರಿಯಾದ ನೆರವು ಸೇವೆಯನ್ನು ಹುಡುಕಿ, ಮುಂದೇನು ಮಾಡಬೇಕೆಂದು ತಿಳಿಯಿರಿ.",
+        "Confirm your country. Describe the help you need.": "ನಿಮ್ಮ ದೇಶವನ್ನು ದೃಢಪಡಿಸಿ ಮತ್ತು ಯಾವ ನೆರವು ಬೇಕೆಂದು ತಿಳಿಸಿ."
       }
     },
     {
@@ -258,7 +274,9 @@
         "Offline": "ഓഫ്‌ലൈൻ",
         "Current country": "നിലവിലെ രാജ്യം",
         "Help is closer than you think.": "സഹായം നിങ്ങൾ കരുതുന്നതിലും അടുത്താണ്.",
-        "Emergency controls": "അടിയന്തര നിയന്ത്രണങ്ങൾ"
+        "Emergency controls": "അടിയന്തര നിയന്ത്രണങ്ങൾ",
+        "Find the right service. Make the next step clear.": "ശരിയായ സഹായ സേവനം കണ്ടെത്തി അടുത്തതായി എന്ത് ചെയ്യണമെന്ന് മനസ്സിലാക്കുക.",
+        "Confirm your country. Describe the help you need.": "നിങ്ങളുടെ രാജ്യം സ്ഥിരീകരിച്ച് എന്ത് സഹായമാണ് വേണ്ടതെന്ന് പറയുക."
       }
     },
     {
@@ -287,7 +305,9 @@
         "Offline": "ਔਫਲਾਈਨ",
         "Current country": "ਮੌਜੂਦਾ ਦੇਸ਼",
         "Help is closer than you think.": "ਮਦਦ ਤੁਹਾਡੇ ਖ਼ਿਆਲ ਤੋਂ ਵੱਧ ਨੇੜੇ ਹੈ।",
-        "Emergency controls": "ਐਮਰਜੈਂਸੀ ਕੰਟਰੋਲ"
+        "Emergency controls": "ਐਮਰਜੈਂਸੀ ਕੰਟਰੋਲ",
+        "Find the right service. Make the next step clear.": "ਸਹੀ ਮਦਦ ਸੇਵਾ ਲੱਭੋ ਅਤੇ ਜਾਣੋ ਕਿ ਅੱਗੇ ਕੀ ਕਰਨਾ ਹੈ।",
+        "Confirm your country. Describe the help you need.": "ਆਪਣੇ ਦੇਸ਼ ਦੀ ਪੁਸ਼ਟੀ ਕਰੋ ਅਤੇ ਦੱਸੋ ਕਿ ਤੁਹਾਨੂੰ ਕਿਹੜੀ ਮਦਦ ਚਾਹੀਦੀ ਹੈ।"
       }
     },
     {
@@ -316,7 +336,9 @@
         "Offline": "آف لائن",
         "Current country": "موجودہ ملک",
         "Help is closer than you think.": "مدد آپ کی سوچ سے زیادہ قریب ہے۔",
-        "Emergency controls": "ہنگامی کنٹرول"
+        "Emergency controls": "ہنگامی کنٹرول",
+        "Find the right service. Make the next step clear.": "مناسب امدادی خدمت تلاش کریں اور جانیں کہ آگے کیا کرنا ہے۔",
+        "Confirm your country. Describe the help you need.": "اپنے ملک کی تصدیق کریں اور بتائیں کہ آپ کو کیا مدد چاہیے۔"
       }
     },
     {
@@ -345,7 +367,9 @@
         "Offline": "अफलाइन",
         "Current country": "हालको देश",
         "Help is closer than you think.": "मद्दत तपाईंले सोचेभन्दा नजिक छ।",
-        "Emergency controls": "आपतकालीन नियन्त्रणहरू"
+        "Emergency controls": "आपतकालीन नियन्त्रणहरू",
+        "Find the right service. Make the next step clear.": "उपयुक्त सहायता सेवा खोज्नुहोस् र अब के गर्ने थाहा पाउनुहोस्।",
+        "Confirm your country. Describe the help you need.": "आफ्नो देश पुष्टि गर्नुहोस् र कस्तो मद्दत चाहिन्छ भन्नुहोस्।"
       }
     },
     {
@@ -374,7 +398,9 @@
         "Offline": "غير متصل",
         "Current country": "البلد الحالي",
         "Help is closer than you think.": "المساعدة أقرب مما تظن.",
-        "Emergency controls": "إجراءات الطوارئ"
+        "Emergency controls": "إجراءات الطوارئ",
+        "Find the right service. Make the next step clear.": "اعثر على خدمة المساعدة المناسبة واعرف ما عليك فعله بعد ذلك.",
+        "Confirm your country. Describe the help you need.": "أكّد بلدك واشرح نوع المساعدة التي تحتاجها."
       }
     },
     {
@@ -403,7 +429,9 @@
         "Offline": "آفلاین",
         "Current country": "کشور فعلی",
         "Help is closer than you think.": "کمک نزدیک‌تر از چیزی است که فکر می‌کنید.",
-        "Emergency controls": "کنترل‌های اضطراری"
+        "Emergency controls": "کنترل‌های اضطراری",
+        "Find the right service. Make the next step clear.": "خدمات مناسب را پیدا کنید و بدانید قدم بعدی چیست.",
+        "Confirm your country. Describe the help you need.": "کشور خود را تأیید کنید و بگویید چه کمکی نیاز دارید."
       }
     },
     {
@@ -432,7 +460,9 @@
         "Offline": "לא מקוון",
         "Current country": "המדינה הנוכחית",
         "Help is closer than you think.": "העזרה קרובה יותר ממה שנדמה.",
-        "Emergency controls": "פעולות חירום"
+        "Emergency controls": "פעולות חירום",
+        "Find the right service. Make the next step clear.": "מצאו את שירות הסיוע המתאים והבינו מה הצעד הבא.",
+        "Confirm your country. Describe the help you need.": "אשרו את המדינה שלכם ותארו איזו עזרה אתם צריכים."
       }
     },
     {
@@ -461,7 +491,9 @@
         "Offline": "Çevrimdışı",
         "Current country": "Mevcut ülke",
         "Help is closer than you think.": "Yardım düşündüğünüzden daha yakın.",
-        "Emergency controls": "Acil durum kontrolleri"
+        "Emergency controls": "Acil durum kontrolleri",
+        "Find the right service. Make the next step clear.": "Doğru yardım hizmetini bulun ve bir sonraki adımı öğrenin.",
+        "Confirm your country. Describe the help you need.": "Bulunduğunuz ülkeyi doğrulayın ve ne tür yardıma ihtiyacınız olduğunu anlatın."
       }
     },
     {
@@ -490,7 +522,9 @@
         "Offline": "Hors ligne",
         "Current country": "Pays actuel",
         "Help is closer than you think.": "L’aide est plus proche que vous ne le pensez.",
-        "Emergency controls": "Commandes d’urgence"
+        "Emergency controls": "Commandes d’urgence",
+        "Find the right service. Make the next step clear.": "Trouvez le service adapté et sachez quoi faire ensuite.",
+        "Confirm your country. Describe the help you need.": "Confirmez votre pays et décrivez l’aide dont vous avez besoin."
       }
     },
     {
@@ -519,7 +553,9 @@
         "Offline": "Sin conexión",
         "Current country": "País actual",
         "Help is closer than you think.": "La ayuda está más cerca de lo que crees.",
-        "Emergency controls": "Controles de emergencia"
+        "Emergency controls": "Controles de emergencia",
+        "Find the right service. Make the next step clear.": "Encuentra el servicio adecuado y averigua qué hacer después.",
+        "Confirm your country. Describe the help you need.": "Confirma tu país y describe qué ayuda necesitas."
       }
     },
     {
@@ -548,7 +584,9 @@
         "Offline": "Offline",
         "Current country": "País atual",
         "Help is closer than you think.": "A ajuda está mais perto do que você imagina.",
-        "Emergency controls": "Controles de emergência"
+        "Emergency controls": "Controles de emergência",
+        "Find the right service. Make the next step clear.": "Encontre o serviço certo e saiba o que fazer em seguida.",
+        "Confirm your country. Describe the help you need.": "Confirme seu país e descreva de que ajuda precisa."
       }
     },
     {
@@ -577,7 +615,9 @@
         "Offline": "Offline",
         "Current country": "Aktuelles Land",
         "Help is closer than you think.": "Hilfe ist näher, als Sie denken.",
-        "Emergency controls": "Notfallfunktionen"
+        "Emergency controls": "Notfallfunktionen",
+        "Find the right service. Make the next step clear.": "Finden Sie die passende Anlaufstelle und erfahren Sie, was als Nächstes zu tun ist.",
+        "Confirm your country. Describe the help you need.": "Bestätigen Sie Ihr Land und beschreiben Sie, welche Hilfe Sie brauchen."
       }
     },
     {
@@ -606,7 +646,9 @@
         "Offline": "Offline",
         "Current country": "Paese attuale",
         "Help is closer than you think.": "L’aiuto è più vicino di quanto pensi.",
-        "Emergency controls": "Controlli di emergenza"
+        "Emergency controls": "Controlli di emergenza",
+        "Find the right service. Make the next step clear.": "Trova il servizio adatto e scopri cosa fare dopo.",
+        "Confirm your country. Describe the help you need.": "Conferma il tuo paese e descrivi l’aiuto di cui hai bisogno."
       }
     },
     {
@@ -635,7 +677,9 @@
         "Offline": "Offline",
         "Current country": "Huidig land",
         "Help is closer than you think.": "Hulp is dichterbij dan je denkt.",
-        "Emergency controls": "Noodfuncties"
+        "Emergency controls": "Noodfuncties",
+        "Find the right service. Make the next step clear.": "Vind de juiste hulpdienst en ontdek wat je daarna kunt doen.",
+        "Confirm your country. Describe the help you need.": "Bevestig je land en beschrijf welke hulp je nodig hebt."
       }
     },
     {
@@ -664,7 +708,9 @@
         "Offline": "Offline",
         "Current country": "Obecny kraj",
         "Help is closer than you think.": "Pomoc jest bliżej, niż myślisz.",
-        "Emergency controls": "Funkcje alarmowe"
+        "Emergency controls": "Funkcje alarmowe",
+        "Find the right service. Make the next step clear.": "Znajdź odpowiednią służbę i dowiedz się, co zrobić dalej.",
+        "Confirm your country. Describe the help you need.": "Potwierdź kraj i opisz, jakiej pomocy potrzebujesz."
       }
     },
     {
@@ -693,7 +739,9 @@
         "Offline": "Не в сети",
         "Current country": "Текущая страна",
         "Help is closer than you think.": "Помощь ближе, чем вы думаете.",
-        "Emergency controls": "Экстренные действия"
+        "Emergency controls": "Экстренные действия",
+        "Find the right service. Make the next step clear.": "Найдите подходящую службу и узнайте, что делать дальше.",
+        "Confirm your country. Describe the help you need.": "Подтвердите страну и опишите, какая помощь вам нужна."
       }
     },
     {
@@ -722,7 +770,9 @@
         "Offline": "Поза мережею",
         "Current country": "Поточна країна",
         "Help is closer than you think.": "Допомога ближче, ніж ви думаєте.",
-        "Emergency controls": "Екстрені дії"
+        "Emergency controls": "Екстрені дії",
+        "Find the right service. Make the next step clear.": "Знайдіть потрібну службу й дізнайтеся, що робити далі.",
+        "Confirm your country. Describe the help you need.": "Підтвердьте країну й опишіть, яка допомога вам потрібна."
       }
     },
     {
@@ -751,7 +801,9 @@
         "Offline": "离线",
         "Current country": "当前国家",
         "Help is closer than you think.": "帮助比您想象的更近。",
-        "Emergency controls": "紧急控制"
+        "Emergency controls": "紧急控制",
+        "Find the right service. Make the next step clear.": "找到合适的求助服务，了解下一步该怎么做。",
+        "Confirm your country. Describe the help you need.": "确认所在国家，并说明您需要什么帮助。"
       }
     },
     {
@@ -780,7 +832,9 @@
         "Offline": "オフライン",
         "Current country": "現在の国",
         "Help is closer than you think.": "助けは思っているより近くにあります。",
-        "Emergency controls": "緊急操作"
+        "Emergency controls": "緊急操作",
+        "Find the right service. Make the next step clear.": "適切な相談先を見つけ、次に何をすべきか確認できます。",
+        "Confirm your country. Describe the help you need.": "現在いる国を確認し、必要な支援を説明してください。"
       }
     },
     {
@@ -809,7 +863,9 @@
         "Offline": "오프라인",
         "Current country": "현재 국가",
         "Help is closer than you think.": "도움은 생각보다 가까이 있습니다.",
-        "Emergency controls": "긴급 제어"
+        "Emergency controls": "긴급 제어",
+        "Find the right service. Make the next step clear.": "알맞은 지원 기관을 찾고 다음에 무엇을 해야 할지 확인하세요.",
+        "Confirm your country. Describe the help you need.": "현재 국가를 확인하고 어떤 도움이 필요한지 설명하세요."
       }
     },
     {
@@ -838,7 +894,9 @@
         "Offline": "Offline",
         "Current country": "Negara saat ini",
         "Help is closer than you think.": "Bantuan lebih dekat dari yang Anda kira.",
-        "Emergency controls": "Kontrol darurat"
+        "Emergency controls": "Kontrol darurat",
+        "Find the right service. Make the next step clear.": "Temukan layanan yang tepat dan ketahui langkah selanjutnya.",
+        "Confirm your country. Describe the help you need.": "Konfirmasikan negara Anda dan jelaskan bantuan yang Anda perlukan."
       }
     },
     {
@@ -867,7 +925,9 @@
         "Offline": "Luar talian",
         "Current country": "Negara semasa",
         "Help is closer than you think.": "Bantuan lebih dekat daripada yang anda sangka.",
-        "Emergency controls": "Kawalan kecemasan"
+        "Emergency controls": "Kawalan kecemasan",
+        "Find the right service. Make the next step clear.": "Cari perkhidmatan yang sesuai dan ketahui langkah seterusnya.",
+        "Confirm your country. Describe the help you need.": "Sahkan negara anda dan terangkan bantuan yang diperlukan."
       }
     },
     {
@@ -896,7 +956,9 @@
         "Offline": "ออฟไลน์",
         "Current country": "ประเทศปัจจุบัน",
         "Help is closer than you think.": "ความช่วยเหลืออยู่ใกล้กว่าที่คุณคิด",
-        "Emergency controls": "การควบคุมฉุกเฉิน"
+        "Emergency controls": "การควบคุมฉุกเฉิน",
+        "Find the right service. Make the next step clear.": "ค้นหาบริการช่วยเหลือที่เหมาะสมและดูว่าควรทำอะไรต่อไป",
+        "Confirm your country. Describe the help you need.": "ยืนยันประเทศของคุณและอธิบายว่าต้องการความช่วยเหลืออะไร"
       }
     },
     {
@@ -925,7 +987,9 @@
         "Offline": "Ngoại tuyến",
         "Current country": "Quốc gia hiện tại",
         "Help is closer than you think.": "Sự giúp đỡ gần hơn bạn nghĩ.",
-        "Emergency controls": "Điều khiển khẩn cấp"
+        "Emergency controls": "Điều khiển khẩn cấp",
+        "Find the right service. Make the next step clear.": "Tìm dịch vụ phù hợp và biết bạn nên làm gì tiếp theo.",
+        "Confirm your country. Describe the help you need.": "Xác nhận quốc gia của bạn và mô tả sự trợ giúp bạn cần."
       }
     }
   ],

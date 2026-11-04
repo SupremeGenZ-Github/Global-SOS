@@ -72,7 +72,7 @@ try {
  await desktop.goto(origin+'/desktop');
  await desktop.getByRole('region',{name:'Desktop safety console'}).waitFor();
  assert.equal(await desktop.locator('.phone-home').isVisible(),false);
- await desktop.getByRole('button',{name:'Inbox, check-ins and sharing'}).click();
+ await desktop.locator('.desktop-console').getByRole('button',{name:'My Safety',exact:true}).click();
  await desktop.getByRole('region',{name:'Safety tools'}).waitFor();
  await desktop.goto(origin+'/mobile');
  await desktop.locator('.phone-home').waitFor();
