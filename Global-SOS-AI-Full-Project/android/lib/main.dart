@@ -9,6 +9,8 @@ import 'services.dart';
 import 'localization.dart';
 import 'device_tools.dart';
 import 'safety_checklist.dart';
+import 'intent_model.dart';
+import 'sos_practice.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -97,6 +99,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       s['history'] = s['history'] is List ? s['history'] : <dynamic>[];
       final p = await SharedPreferences.getInstance();
       await AppLanguages.load();
+      await IntentModel.load();
       final c =
           await (widget.categoryLoader?.call() ??
               rootBundle
@@ -826,11 +829,15 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       conversation.add({'text': text, 'user': true});
     });
     String intent = classify(text);
-    String mode = 'Offline rules (not an LLM)';
+    final learnedIntent = intent == 'other' ? IntentModel.predict(text) : null;
+    intent = learnedIntent ?? intent;
+    String mode = learnedIntent == null
+        ? 'Offline rules (not an LLM)'
+        : 'Offline trained intent model';
     List<Json> selected = [];
     String? answer;
     try {
-      if (allowOnline) {
+      if (allowOnline && !isUrgent(text) && learnedIntent == null) {
         if (serverInput.text.isEmpty) throw StateError('Set server URL');
         final data = await api.call(
           '/chat',
@@ -1204,7 +1211,54 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     heading(
       'ONE TAP. ONE CONVERSATION.',
       'Help is closer\nthan you think.',
-      'Find the right service. Make the next step clear.',
+      'Find emergency contacts and prepare your safety plan.',
+    ),
+    Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Emergency readiness',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              country.isEmpty
+                  ? 'Choose your country to see local services.'
+                  : 'Country: $country',
+            ),
+            Text(
+              directory == null
+                  ? 'Loading the directory'
+                  : 'Saved directory available offline',
+            ),
+            Text('Trusted contacts: ${(safety['contacts'] as List).length}'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () =>
+                      setState(() => page = country.isEmpty ? 5 : 4),
+                  icon: const Icon(Icons.shield_outlined),
+                  label: Text(country.isEmpty ? 'Choose country' : 'My Safety'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => showDialog<void>(
+                    context: navigatorKey.currentContext!,
+                    builder: (_) => const SosPractice(),
+                  ),
+                  icon: const Icon(Icons.timer_outlined),
+                  label: const Text('Practice SOS'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     ),
     Card(
       color: const Color(0xff241c2c),
@@ -1456,6 +1510,32 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       'Safety assistant',
       'Confirm your country. Avoid unnecessary personal details.',
     ),
+    if (conversation.isEmpty)
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final (label, example) in [
+            ('Medical', 'Someone collapsed and will not wake up.'),
+            ('Fire', 'There is smoke in my building.'),
+            ('Personal safety', 'Someone is threatening me.'),
+            ('Online fraud', 'A fake payment link stole my card details.'),
+          ])
+            ActionChip(
+              label: Text(label),
+              onPressed: () => chatInput.text = example,
+            ),
+        ],
+      ),
+    if (conversation.isNotEmpty && !busy)
+      Align(
+        alignment: AlignmentDirectional.centerEnd,
+        child: TextButton.icon(
+          onPressed: () => setState(conversation.clear),
+          icon: const Icon(Icons.delete_outline),
+          label: const Text('Clear conversation'),
+        ),
+      ),
     SwitchListTile(
       contentPadding: EdgeInsets.zero,
       title: const Text('Allow online AI routing'),

@@ -1,5 +1,6 @@
 import {createHash,timingSafeEqual,randomBytes} from 'node:crypto';
 import {readFileSync} from 'node:fs';
+import {predictIntent} from './intent-model.mjs';
 const languagePatterns=JSON.parse(readFileSync(new URL('../shared/languages.json',import.meta.url))).intents;
 export const languageIntent=text=>Object.entries(languagePatterns).find(([,pattern])=>new RegExp(pattern,'iu').test(text))?.[0]??null;
 export const categories=JSON.parse(readFileSync(new URL('../shared/categories.json',import.meta.url)));
@@ -10,12 +11,19 @@ export function equalSecret(got,expected){if(!expected||expected.length<32||type
 const faq=JSON.parse(readFileSync(new URL('../shared/assistant-faq.json',import.meta.url)));
 export function everydayReply(text){if(urgent(text))return null;return faq.find(x=>new RegExp(x.pattern,'i').test(text.trim()))?.answer??null;}
 export function classify(text){
+ const critical=criticalIntent(text);if(critical)return critical;
  const local=languageIntent(text);if(local)return local;
  const t=text.toLowerCase();
  const rules=[['mental',/suicid|self.harm|kill myself|end my life/],['fire',/fire|burning|smoke|flames|आग/],['ambulance',/unconscious|not breathing|can.t breathe|cannot breathe|choking|stabbed|chest pain|bleeding|ambulance|heart attack|medical|injur/],['poison',/poison|overdose|swallowed chemical/],['domestic',/domestic|partner.*(hit|hurt)|abuse/],['police',/attack|robbe|police|danger|assault|gun|stalk|rape|पुलिस/],['child',/child|kidnap/],['cyber',/cyber|scam|fraud|hack/],['road',/crash|road accident|collision/],['flood',/flood|earthquake|tsunami/],['marine',/sea|boat|drowning/],['mountain',/mountain|hiking|wilderness/],['utilities',/gas leak|electric/],['women',/women|woman/],['tourist',/tourist|passport/],['railway',/railway|train/],['senior',/elderly|senior/],['disability',/disabil|deaf/],['consumer',/consumer|refund/],['workplace',/workplace/],['missing',/missing/]];
- return rules.find(([,re])=>re.test(t))?.[0]??'other';
+ return rules.find(([,re])=>re.test(t))?.[0]??predictIntent(text)??'other';
 }
-export const urgent=t=>!!languageIntent(t)||/unconscious|not breathing|can.t breathe|cannot breathe|choking|stabbed|severe bleeding|\bfire\b|attack|immediate|gun|suicid|kill myself|overdose|earthquake|flood|gas leak/i.test(t);
+function criticalIntent(text){
+ if(/\b(?:collapsed|unresponsive|gasping|seizure|slurred speech)\b|w(?:ill|on.t)\s+not wake up|won.t wake up/i.test(text))return 'ambulance';
+ if(/(?:swallowed|drank|ingested).{0,40}(?:bleach|cleaner|detergent|pesticide)|too many (?:pills|tablets)/i.test(text))return 'poison';
+ if(/(?:smell|odor) of gas|gas (?:smell|odor)|(?:downed|fallen) power (?:line|cable)/i.test(text))return 'utilities';
+ return null;
+}
+export const urgent=t=>!!criticalIntent(t)||!!languageIntent(t)||/unconscious|not breathing|can.t breathe|cannot breathe|choking|stabbed|severe bleeding|\bfire\b|attack|immediate|gun|suicid|kill myself|overdose|earthquake|flood|gas leak/i.test(t);
 export function filterRecords(records,{country,category,q='',channel,region}={}){
  if(!country)return [];
  return records.filter(r=>r.country===country&&(!category||r.categories.includes(category))&&(!channel||r.channels.some(c=>c.kind===channel))&&(!region||!r.region||r.region.toLowerCase().includes(region.toLowerCase()))&&(!q||`${r.name} ${r.categories.join(' ')} ${r.region??''} ${r.channels.map(c=>c.value).join(' ')}`.toLowerCase().includes(q.toLowerCase())));
@@ -26,7 +34,7 @@ export function responseFor(text,category,records){
  if(category==='other')return /^(hi|hello|hey|thanks|thank you)[!. ]*$/i.test(text.trim())?'Hello. Tell me what kind of help you need and confirm your country.':'Choose a service below or describe the help you need. This assistant routes to source-checked contacts; it does not provide medical diagnosis.';
  return 'These source-checked services match your request. Read the jurisdiction and channel notes before contacting them.';
 }
-export function safeIntent(modelOutput){const x=String(modelOutput).trim().toLowerCase().replace(/[^a-z]/g,'');return categoryIds.includes(x)?x:null;}
+export function safeIntent(modelOutput){const x=String(modelOutput).trim().toLowerCase();return categoryIds.includes(x)?x:null;}
 export function validateChannel(c){
  if(!c||!['phone','sms','whatsapp','email','web'].includes(c.kind)||typeof c.value!=='string')return false;
  if(c.kind==='phone'||c.kind==='sms')return /^\+?[0-9][0-9 ()-]{1,24}$/.test(c.value);

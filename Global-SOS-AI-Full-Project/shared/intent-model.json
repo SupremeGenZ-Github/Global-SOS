@@ -1,0 +1,124 @@
+{
+  "minimumScore": 0.55,
+  "minimumMargin": 0.18,
+  "weights": {
+    "ambulance": {},
+    "fire": {
+      "flames": 0.5,
+      "coming": 0.1667,
+      "kitchen": 0.1667,
+      "building": 0.25,
+      "smoke": 0.25,
+      "burning": 0.25
+    },
+    "police": {
+      "stranger": 0.375,
+      "broke": 0.25,
+      "door": 0.25,
+      "threatening": 0.375
+    },
+    "domestic": {
+      "partner": 0.5,
+      "spouse": 0.25,
+      "hits": 0.25,
+      "threatens": 0.25
+    },
+    "cyber": {
+      "stole": 0.25,
+      "login": 0.25,
+      "money": 0.1667,
+      "fake": 0.375,
+      "link": 0.375,
+      "bank": 0.25,
+      "payment": 0.25
+    },
+    "road": {
+      "trapped": 0.2813,
+      "vehicle": 0.375,
+      "overturned": 0.375,
+      "highway": 0.25,
+      "hit": 0.375,
+      "car": 0.25
+    },
+    "poison": {
+      "drank": 0.375,
+      "swallowed": 0.375,
+      "child": 0.375
+    },
+    "missing": {
+      "daughter": 0.25,
+      "never": 0.375,
+      "returned": 0.25,
+      "home": 0.225,
+      "relative": 0.25,
+      "disappeared": 0.25,
+      "wandered": 0.25,
+      "school": 0.1667
+    },
+    "marine": {
+      "offshore": 0.375,
+      "vessel": 0.25,
+      "far": 0.25,
+      "shore": 0.25,
+      "engine": 0.25,
+      "swept": 0.25,
+      "sea": 0.25
+    },
+    "mountain": {
+      "lost": 0.4,
+      "remote": 0.25,
+      "trail": 0.25,
+      "climber": 0.25,
+      "woods": 0.25
+    },
+    "utilities": {
+      "power": 0.625,
+      "cable": 0.375,
+      "sparking": 0.25,
+      "line": 0.25,
+      "fell": 0.1667,
+      "across": 0.25,
+      "gas": 0.375,
+      "smell": 0.25,
+      "pipe": 0.25,
+      "near": 0.25
+    },
+    "consular": {
+      "embassy": 0.375,
+      "travel": 0.5,
+      "documents": 0.375,
+      "citizen": 0.375,
+      "overseas": 0.5,
+      "consulate": 0.5,
+      "assistance": 0.25,
+      "abroad": 0.25
+    },
+    "consumer": {
+      "defective": 0.25,
+      "goods": 0.25,
+      "refuses": 0.4,
+      "replacement": 0.375,
+      "merchant": 0.25,
+      "warranty": 0.25,
+      "broken": 0.1667,
+      "seller": 0.25,
+      "appliance": 0.25,
+      "purchase": 0.25
+    },
+    "workplace": {
+      "unsafe": 0.375,
+      "factory": 0.375,
+      "employer": 0.25,
+      "protective": 0.25,
+      "guards": 0.25,
+      "equipment": 0.375,
+      "workers": 0.25,
+      "construction": 0.25
+    },
+    "other": {
+      "what": 0.25,
+      "does": 0.25,
+      "how": 0.25
+    }
+  }
+}
