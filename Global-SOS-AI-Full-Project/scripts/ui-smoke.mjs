@@ -1,5 +1,6 @@
 import {chromium} from 'playwright';
 import {spawn} from 'node:child_process';
+import {readFile} from 'node:fs/promises';
 import assert from 'node:assert/strict';
 const port=4178, origin='http://127.0.0.1:'+port;
 const server=spawn(process.execPath,['backend/server.mjs'],{env:{...process.env,PORT:String(port),DATABASE_URL:'',APP_BASE_URL:origin,CORS_ORIGINS:origin},stdio:'ignore'});
@@ -41,4 +42,30 @@ try {
  assert.ok(await page.locator('body').evaluate(el=>el.scrollWidth<=window.innerWidth),'mobile layout must not overflow horizontally');
  console.log('PASS: mobile SOS preparation, countdown cancellation, mock provider alerts and fresh consented location; no real calls or messages');
  await context.close();
+ const fallbackContext=await browser.newContext({viewport:{width:390,height:844}});
+ const fallbackPage=await fallbackContext.newPage();
+ const source=JSON.parse(await readFile('shared/directory.json','utf8'));
+ const reviewed={...source,version:'reviewed-99',origin:'server',bundle_release:2,records:[]};
+ await fallbackPage.addInitScript(data=>{localStorage.setItem('sos_directory',JSON.stringify(data));localStorage.setItem('sos_country','IN');},reviewed);
+ await fallbackPage.route('**/api/directory',route=>route.fulfill({json:{...source,authoritative:false,database_status:'unavailable'}}));
+ await fallbackPage.route('**/api/chat',route=>route.fulfill({json:{message:'Fallback',records:source.records.filter(r=>r.country==='IN').slice(0,1),mode:'deterministic_router',authoritative:false}}));
+ await fallbackPage.goto(origin,{waitUntil:'networkidle'});
+ assert.equal(await fallbackPage.evaluate(()=>JSON.parse(localStorage.getItem('sos_directory')).version),'reviewed-99','fallback must preserve the reviewed cache');
+ assert.match(await fallbackPage.locator('.footnote').last().innerText(),/PostgreSQL unavailable/);
+ assert.equal(await fallbackPage.locator('.sos-orb svg').count(),1,'SOS must have an emergency SVG icon');
+ await fallbackPage.getByLabel('Interface language').selectOption('te');
+ assert.equal(await fallbackPage.locator('html').getAttribute('lang'),'te');
+ assert.ok((await fallbackPage.locator('nav').innerText()).includes('హోమ్'));
+ await fallbackPage.getByLabel('Interface language').selectOption('ar');
+ assert.equal(await fallbackPage.locator('html').getAttribute('dir'),'rtl');
+ assert.ok(await fallbackPage.locator('body').evaluate(el=>el.scrollWidth<=window.innerWidth),'Arabic mobile layout must not overflow');
+ await fallbackPage.getByLabel('Interface language').selectOption('en');
+ await fallbackPage.locator('nav button').filter({hasText:'AI Assistant'}).click();
+ await fallbackPage.getByLabel('Allow online routing',{exact:false}).check();
+ await fallbackPage.getByLabel('Message',{exact:true}).fill('fire');
+ await fallbackPage.getByRole('button',{name:'Send',exact:false}).click();
+ await fallbackPage.waitForFunction(()=>document.body.textContent.includes('Saved directory routing'));
+ assert.equal(await fallbackPage.locator('.conversation .service-card').count(),0,'server fallback must not revive withdrawn services');
+ console.log('PASS: 32-language controls, Telugu labels, Arabic RTL, emergency SVG and cache preservation during PostgreSQL failure');
+ await fallbackContext.close();
 } finally {await browser?.close();server.kill();}

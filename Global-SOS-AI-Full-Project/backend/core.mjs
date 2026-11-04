@@ -1,5 +1,7 @@
 import {createHash,timingSafeEqual,randomBytes} from 'node:crypto';
 import {readFileSync} from 'node:fs';
+const languagePatterns=JSON.parse(readFileSync(new URL('../shared/languages.json',import.meta.url))).intents;
+export const languageIntent=text=>Object.entries(languagePatterns).find(([,pattern])=>new RegExp(pattern,'iu').test(text))?.[0]??null;
 export const categories=JSON.parse(readFileSync(new URL('../shared/categories.json',import.meta.url)));
 export const categoryIds=categories.map(x=>x.id);
 export const sha=x=>createHash('sha256').update(x).digest('hex');
@@ -8,11 +10,12 @@ export function equalSecret(got,expected){if(!expected||expected.length<32||type
 const faq=JSON.parse(readFileSync(new URL('../shared/assistant-faq.json',import.meta.url)));
 export function everydayReply(text){if(urgent(text))return null;return faq.find(x=>new RegExp(x.pattern,'i').test(text.trim()))?.answer??null;}
 export function classify(text){
+ const local=languageIntent(text);if(local)return local;
  const t=text.toLowerCase();
  const rules=[['mental',/suicid|self.harm|kill myself|end my life/],['fire',/fire|burning|smoke|flames|आग/],['ambulance',/unconscious|not breathing|can.t breathe|cannot breathe|choking|stabbed|chest pain|bleeding|ambulance|heart attack|medical|injur/],['poison',/poison|overdose|swallowed chemical/],['domestic',/domestic|partner.*(hit|hurt)|abuse/],['police',/attack|robbe|police|danger|assault|gun|stalk|rape|पुलिस/],['child',/child|kidnap/],['cyber',/cyber|scam|fraud|hack/],['road',/crash|road accident|collision/],['flood',/flood|earthquake|tsunami/],['marine',/sea|boat|drowning/],['mountain',/mountain|hiking|wilderness/],['utilities',/gas leak|electric/],['women',/women|woman/],['tourist',/tourist|passport/],['railway',/railway|train/],['senior',/elderly|senior/],['disability',/disabil|deaf/],['consumer',/consumer|refund/],['workplace',/workplace/],['missing',/missing/]];
  return rules.find(([,re])=>re.test(t))?.[0]??'other';
 }
-export const urgent=t=>/unconscious|not breathing|can.t breathe|cannot breathe|choking|stabbed|severe bleeding|\bfire\b|attack|immediate|gun|suicid|kill myself|overdose|earthquake|flood|gas leak/i.test(t);
+export const urgent=t=>!!languageIntent(t)||/unconscious|not breathing|can.t breathe|cannot breathe|choking|stabbed|severe bleeding|\bfire\b|attack|immediate|gun|suicid|kill myself|overdose|earthquake|flood|gas leak/i.test(t);
 export function filterRecords(records,{country,category,q='',channel,region}={}){
  if(!country)return [];
  return records.filter(r=>r.country===country&&(!category||r.categories.includes(category))&&(!channel||r.channels.some(c=>c.kind===channel))&&(!region||!r.region||r.region.toLowerCase().includes(region.toLowerCase()))&&(!q||`${r.name} ${r.categories.join(' ')} ${r.region??''} ${r.channels.map(c=>c.value).join(' ')}`.toLowerCase().includes(q.toLowerCase())));

@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'services.dart';
+import 'localization.dart';
 import 'device_tools.dart';
 import 'safety_checklist.dart';
 
@@ -69,6 +70,8 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
   List<Json> alertResults = [];
   bool notifying = false;
   bool addressConsent = false;
+  String languageCode = 'en';
+  String t(String text) => AppLanguages.translate(languageCode, text);
   bool syncing = false, preparingSOS = false, deviceSmsGranted = false;
   int sosGeneration = 0, locationGeneration = 0;
   DateTime? lastSync;
@@ -93,6 +96,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       s['contacts'] = s['contacts'] is List ? s['contacts'] : <dynamic>[];
       s['history'] = s['history'] is List ? s['history'] : <dynamic>[];
       final p = await SharedPreferences.getInstance();
+      await AppLanguages.load();
       final c =
           await (widget.categoryLoader?.call() ??
               rootBundle
@@ -105,6 +109,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         prefs = p;
         categories = c;
         country = p.getString('country') ?? '';
+        languageCode = p.getString('language') ?? 'en';
         favorites = p.getStringList('favorites') ?? [];
         light = p.getBool('light') ?? false;
         contrast = p.getBool('contrast') ?? false;
@@ -113,8 +118,13 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         addressConsent = p.getBool('addressConsent') ?? false;
         serverInput.text =
             p.getString('server') ??
-            const String.fromEnvironment('API_BASE_URL', defaultValue: 'https://global-sos.onrender.com');
-        if (serverInput.text.trim().isEmpty) serverInput.text = 'https://global-sos.onrender.com';
+            const String.fromEnvironment(
+              'API_BASE_URL',
+              defaultValue: 'https://global-sos.onrender.com',
+            );
+        if (serverInput.text.trim().isEmpty) {
+          serverInput.text = 'https://global-sos.onrender.com';
+        }
         status = 'Offline directory ready · version ${d['version']}';
       });
       if (widget.directoryLoader == null) unawaited(sync());
@@ -148,18 +158,32 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     }
     try {
       final d = await api.call('/directory');
-      if (d['version'] == null || d['countries'] is! List || d['records'] is! List || (d['countries'] as List).isEmpty) throw const FormatException('Invalid directory');
+      if (d['version'] == null ||
+          d['countries'] is! List ||
+          d['records'] is! List ||
+          (d['countries'] as List).isEmpty) {
+        throw const FormatException('Invalid directory');
+      }
+      if (d['authoritative'] == false) {
+        lastSync = DateTime.now();
+        note(
+          d['database_status'] == 'not_configured'
+              ? 'Public directory ready. Cloud features are not configured.'
+              : 'Server online. PostgreSQL unavailable; saved directory preserved. Check DATABASE_URL in Render.',
+        );
+        return;
+      }
       d['origin'] = 'server';
       d['bundle_release'] = directory?['bundle_release'] ?? 2;
       await store.replace(d);
       lastSync = DateTime.now();
       if (mounted) setState(() => directory = d);
       note('Directory synchronized · version ${d['version']}');
-    } catch (_) {
-      note(
-        'Server unavailable. The saved offline directory remains available.',
-      );
-    } finally { syncing = false; }
+    } catch (e) {
+      note('Directory request failed. Saved contacts remain available. $e');
+    } finally {
+      syncing = false;
+    }
   }
 
   Future<void> open(Uri? uri) async {
@@ -256,19 +280,38 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
   }
 
   Future<void> startCountdown() async {
-    if (preparingSOS || active || countdown != null || !confirmCountry()) return;
-    if (widget.emergencyDialer != null) { armCountdown(); return; }
+    if (preparingSOS || active || countdown != null || !confirmCountry()) {
+      return;
+    }
+    if (widget.emergencyDialer != null) {
+      armCountdown();
+      return;
+    }
     setState(() => preparingSOS = true);
     try {
-      final choice = await showDialog<String>(context: navigatorKey.currentContext ?? context, builder: (ctx) => AlertDialog(
-        title: const Text('Prepare your SOS'),
-        content: Text('After five seconds, the police number opens in your dialer. Press Call there.\n\nChoose whether to include a fresh location in trusted-contact alerts. Denied permission never blocks emergency dialing.\n\n${(safety['contacts'] as List).length} trusted contacts saved. Only consenting contacts with enabled methods receive automatic alerts.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx, 'without'), child: const Text('Without location')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, 'location'), child: const Text('Include location')),
-        ],
-      ));
+      final choice = await showDialog<String>(
+        context: navigatorKey.currentContext ?? context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Prepare your SOS'),
+          content: Text(
+            'After five seconds, the police number opens in your dialer. Press Call there.\n\nChoose whether to include a fresh location in trusted-contact alerts. Denied permission never blocks emergency dialing.\n\n${(safety['contacts'] as List).length} trusted contacts saved. Only consenting contacts with enabled methods receive automatic alerts.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, 'without'),
+              child: const Text('Without location'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, 'location'),
+              child: const Text('Include location'),
+            ),
+          ],
+        ),
+      );
       if (choice == null || !mounted) return;
       ++locationGeneration;
       pendingLocation = null;
@@ -276,19 +319,36 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       position = null;
       if (locationConsent) {
         var permission = await Geolocator.checkPermission();
-        if (permission == LocationPermission.denied) permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+        }
+        if (permission == LocationPermission.denied ||
+            permission == LocationPermission.deniedForever) {
           locationConsent = false;
           note('Location permission denied. SOS calling will still work.');
         }
       }
-      deviceSmsGranted = safety['automaticAlerts'] == true && safety['deviceSms'] == true
-          ? await DeviceTools.requestSmsPermission() : false;
-      if (!mounted || WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) return;
+      deviceSmsGranted =
+          safety['automaticAlerts'] == true && safety['deviceSms'] == true
+          ? await DeviceTools.requestSmsPermission()
+          : false;
+      if (!mounted ||
+          WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+        return;
+      }
       if (locationConsent) pendingLocation = locate();
       armCountdown();
-    } catch (_) { locationConsent = false; deviceSmsGranted = false; pendingLocation = null; note('Optional permissions unavailable. Continuing to the emergency dialer.'); if (mounted) armCountdown(); }
-    finally { if (mounted) setState(() => preparingSOS = false); }
+    } catch (_) {
+      locationConsent = false;
+      deviceSmsGranted = false;
+      pendingLocation = null;
+      note(
+        'Optional permissions unavailable. Continuing to the emergency dialer.',
+      );
+      if (mounted) armCountdown();
+    } finally {
+      if (mounted) setState(() => preparingSOS = false);
+    }
   }
 
   void armCountdown() {
@@ -330,8 +390,13 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
 
   Future<void> beginSOS() async {
     final generation = ++sosGeneration;
-    setState(() { active = true; alertResults = []; });
-    if (widget.emergencyDialer == null) unawaited(completeSOSAlerts(generation));
+    setState(() {
+      active = true;
+      alertResults = [];
+    });
+    if (widget.emergencyDialer == null) {
+      unawaited(completeSOSAlerts(generation));
+    }
     (safety['history'] as List).insert(0, {
       'at': DateTime.now().toIso8601String(),
       'status': 'SOS started. Call connection and alert delivery unconfirmed.',
@@ -362,33 +427,89 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     if (safety['automaticAlerts'] == true && deviceSmsGranted) {
       for (final c in safety['contacts'] as List) {
         if (!active || generation != sosGeneration) return;
-        if (c['alertConsent'] != true || !(c['methods'] as List? ?? []).contains('sms')) continue;
-        final recipient = c['phone'].toString().replaceAll(RegExp(r'[^+0-9]'), '');
+        if (c['alertConsent'] != true ||
+            !(c['methods'] as List? ?? []).contains('sms')) {
+          continue;
+        }
+        final recipient = c['phone'].toString().replaceAll(
+          RegExp(r'[^+0-9]'),
+          '',
+        );
         if (handledSms.contains(recipient)) continue;
         handledSms.add(recipient);
         try {
           await DeviceTools.sendSms(recipient, alertMessage);
-          if (mounted) setState(() => alertResults.add({'kind':'device SMS', 'recipient':recipient, 'status':'submitted to Android; delivery unconfirmed'}));
+          if (mounted) {
+            setState(
+              () => alertResults.add({
+                'kind': 'device SMS',
+                'recipient': recipient,
+                'status': 'submitted to Android; delivery unconfirmed',
+              }),
+            );
+          }
         } catch (_) {
-          if (mounted) setState(() => alertResults.add({'kind':'device SMS', 'recipient':recipient, 'status':'submission failed or unknown; not retried automatically'}));
+          if (mounted) {
+            setState(
+              () => alertResults.add({
+                'kind': 'device SMS',
+                'recipient': recipient,
+                'status':
+                    'submission failed or unknown; not retried automatically',
+              }),
+            );
+          }
         }
       }
     }
-    if (!active || generation != sosGeneration || serverInput.text.isEmpty) return;
+    if (!active || generation != sosGeneration || serverInput.text.isEmpty) {
+      return;
+    }
     try {
-      final created = await api.call('/sos', method:'POST', body:{'country':country});
+      final created = await api.call(
+        '/sos',
+        method: 'POST',
+        body: {'country': country},
+      );
       if (!mounted || !active || generation != sosGeneration) {
-        await api.call('/sos/${created['id']}', method:'PATCH', capability:created['capability'], body:{'status':'cancelled'});
+        await api.call(
+          '/sos/${created['id']}',
+          method: 'PATCH',
+          capability: created['capability'],
+          body: {'status': 'cancelled'},
+        );
         return;
       }
       setState(() => session = created);
       if (locationConsent && position != null) {
         final p = position!;
-        try { await api.call('/sos/${created['id']}/location', method:'POST', capability:created['capability'], body:{'lat':p.latitude,'lng':p.longitude,'accuracy':p.accuracy}); }
-        catch (_) { note('Location upload failed. Alerts can still include the captured map position.'); }
+        try {
+          await api.call(
+            '/sos/${created['id']}/location',
+            method: 'POST',
+            capability: created['capability'],
+            body: {
+              'lat': p.latitude,
+              'lng': p.longitude,
+              'accuracy': p.accuracy,
+            },
+          );
+        } catch (_) {
+          note(
+            'Location upload failed. Alerts can still include the captured map position.',
+          );
+        }
       }
-      if (active && generation == sosGeneration && safety['automaticAlerts'] == true) await notifyContacts(skipSms:handledSms);
-    } catch (_) { note('Server session unavailable. Device SMS results appear above; other alerts were not submitted.'); }
+      if (active &&
+          generation == sosGeneration &&
+          safety['automaticAlerts'] == true) {
+        await notifyContacts(skipSms: handledSms);
+      }
+    } catch (_) {
+      note(
+        'Server session unavailable. Device SMS results appear above; other alerts were not submitted.',
+      );
+    }
   }
 
   Future<void> locate() async {
@@ -415,7 +536,11 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
           timeLimit: Duration(seconds: 15),
         ),
       );
-      if (mounted && generation == locationGeneration && (preparingSOS || countdown != null || active || !locationConsent)) setState(() => position = pos);
+      if (mounted &&
+          generation == locationGeneration &&
+          (preparingSOS || countdown != null || active || !locationConsent)) {
+        setState(() => position = pos);
+      }
       note(
         'Location captured locally. Confirm your country manually; GPS does not establish emergency jurisdiction.',
       );
@@ -439,7 +564,12 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       for (final method in (c['methods'] as List? ?? ['sms'])) {
         final recipient = method == 'email' ? c['email'] : c['phone'];
         if (recipient != null && recipient.toString().isNotEmpty) {
-          if (method == 'sms' && skipSms.contains(recipient.toString().replaceAll(RegExp(r'[^+0-9]'), ''))) continue;
+          if (method == 'sms' &&
+              skipSms.contains(
+                recipient.toString().replaceAll(RegExp(r'[^+0-9]'), ''),
+              )) {
+            continue;
+          }
           contacts.add({'kind': method, 'recipient': recipient});
         }
       }
@@ -465,7 +595,10 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       );
       if (mounted) {
         setState(
-          () => alertResults = [...alertResults, ...(response['results'] as List).cast<Json>()],
+          () => alertResults = [
+            ...alertResults,
+            ...(response['results'] as List).cast<Json>(),
+          ],
         );
       }
     } catch (_) {
@@ -656,7 +789,12 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      if (widget.directoryLoader == null && !active && (lastSync == null || DateTime.now().difference(lastSync!).inMinutes >= 5)) unawaited(sync());
+      if (widget.directoryLoader == null &&
+          !active &&
+          (lastSync == null ||
+              DateTime.now().difference(lastSync!).inMinutes >= 5)) {
+        unawaited(sync());
+      }
     } else {
       unawaited(stopSharing());
       if (countdown != null) ++locationGeneration;
@@ -699,9 +837,20 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
           method: 'POST',
           body: {'country': country, 'message': text, 'allow_online': true},
         );
-        selected = (data['records'] as List).cast<Json>();
-        answer = data['message'];
-        mode = data['mode'];
+        if (data['authoritative'] == false) {
+          selected = selectRecords(
+            records,
+            country,
+            category: intent == 'other' ? '' : intent,
+            nationalOnly: true,
+          );
+          answer = 'Using your saved directory while PostgreSQL reconnects.';
+          mode = 'Offline fallback rules';
+        } else {
+          selected = (data['records'] as List).cast<Json>();
+          answer = data['message'];
+          mode = data['mode'];
+        }
         if (data['ai_error'] != null) answer = '$answer ${data['ai_error']}';
       } else {
         if (intent == 'other' && model.loaded && !isUrgent(text)) {
@@ -737,7 +886,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
           ];
         }
       }
-    } catch (_) {
+    } catch (e) {
       mode = 'Offline fallback rules';
       selected = selectRecords(
         records,
@@ -745,7 +894,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         category: intent == 'other' ? '' : intent,
         nationalOnly: true,
       );
-      answer = 'Online routing unavailable. Use the saved contacts below.';
+      answer = 'Using saved contacts. Online request failed: $e';
     }
     if (isUrgent(text) && mode.startsWith('Offline')) {
       if (intent == 'other') selected = [];
@@ -791,10 +940,19 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     try {
       final contact = await DeviceTools.pickContact();
       if (contact == null || !mounted) return;
-      (safety['contacts'] as List).add({'id':DateTime.now().microsecondsSinceEpoch.toString(),'name':contact['name'] ?? 'Trusted contact','phone':contact['phone'],'email':'','alertConsent':false,'methods':<String>[]});
+      (safety['contacts'] as List).add({
+        'id': DateTime.now().microsecondsSinceEpoch.toString(),
+        'name': contact['name'] ?? 'Trusted contact',
+        'phone': contact['phone'],
+        'email': '',
+        'alertConsent': false,
+        'methods': <String>[],
+      });
       await saveSafety();
       if (mounted) setState(() {});
-    } catch (_) { note('Contact picker unavailable. Add the contact manually.'); }
+    } catch (_) {
+      note('Contact picker unavailable. Add the contact manually.');
+    }
   }
 
   Future<void> addContact() async {
@@ -986,7 +1144,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         ),
         const SizedBox(height: 12),
         Text(
-          title,
+          t(title.replaceAll('\n', ' ')),
           style: const TextStyle(
             fontSize: 35,
             height: 1.1,
@@ -1019,19 +1177,20 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
               fixedSize: const Size(168, 168),
               elevation: 12,
             ),
-            child: const Column(
+            child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                const Icon(Icons.emergency_outlined, size: 36),
                 Text(
-                  'SOS',
+                  t('SOS'),
                   style: TextStyle(
-                    fontSize: 43,
+                    fontSize: 29,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 3,
                   ),
                 ),
                 Text(
-                  'TAP OR HOLD',
+                  t('Start SOS'),
                   style: TextStyle(fontSize: 8, letterSpacing: 1.5),
                 ),
               ],
@@ -1068,7 +1227,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Calls and messages always need your action.',
+              'Press Call in the dialer. Consented trusted-contact alerts can be automatic.',
               style: TextStyle(color: Colors.white70, fontSize: 11),
             ),
             const SizedBox(height: 15),
@@ -1144,12 +1303,28 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       'After five seconds, opens the verified emergency number in your phone dialer. Press Call there. Cancel below to stop.',
     ),
     if (preparingSOS) const LinearProgressIndicator(),
-    Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('${(safety['contacts'] as List).length} trusted contacts · ${safety['automaticAlerts'] == true ? 'Automatic alerts enabled' : 'Automatic alerts off'}', style: const TextStyle(fontWeight: FontWeight.w700)),
-      const SizedBox(height:8),
-      const Text('1  Choose location permission\n2  Five seconds to cancel\n3  Press Call in the dialer'),
-      TextButton(onPressed: () => setState(() => page = 4), child: const Text('Manage contacts and alert methods')),
-    ]))),
+    Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${(safety['contacts'] as List).length} trusted contacts · ${safety['automaticAlerts'] == true ? 'Automatic alerts enabled' : 'Automatic alerts off'}',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              '1  Choose location permission\n2  Five seconds to cancel\n3  Press Call in the dialer',
+            ),
+            TextButton(
+              onPressed: () => setState(() => page = 4),
+              child: const Text('Manage contacts and alert methods'),
+            ),
+          ],
+        ),
+      ),
+    ),
     if (emergencyNumber != null)
       Text(
         'Emergency shortcut: $emergencyNumber',
@@ -1171,7 +1346,10 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
                   countdownTimer?.cancel();
                   ++locationGeneration;
                   pendingLocation = null;
-                  setState(() {countdown = null; position = null;});
+                  setState(() {
+                    countdown = null;
+                    position = null;
+                  });
                 },
                 child: const Text('Cancel countdown'),
               ),
@@ -1575,7 +1753,11 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       icon: const Icon(Icons.person_add_outlined),
       label: const Text('Add trusted contact'),
     ),
-    OutlinedButton.icon(onPressed: importContact, icon: const Icon(Icons.contacts_outlined), label: const Text('Choose from phone contacts')),
+    OutlinedButton.icon(
+      onPressed: importContact,
+      icon: const Icon(Icons.contacts_outlined),
+      label: const Text('Choose from phone contacts'),
+    ),
     ...(safety['contacts'] as List).cast<Json>().map(
       (c) => trustedContact(c, controls: true),
     ),
@@ -1620,9 +1802,14 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     ),
     SwitchListTile(
       title: const Text('Use this phone to send automatic SMS'),
-      subtitle: const Text('Requests SMS permission when you start SOS. Uses your SIM and mobile plan; charges may apply. Only consenting contacts with SMS enabled are included. Submission does not confirm delivery.'),
+      subtitle: const Text(
+        'Requests SMS permission when you start SOS. Uses your SIM and mobile plan; charges may apply. Only consenting contacts with SMS enabled are included. Submission does not confirm delivery.',
+      ),
       value: safety['deviceSms'] == true,
-      onChanged: (v) { setState(() => safety['deviceSms'] = v); unawaited(saveSafety()); },
+      onChanged: (v) {
+        setState(() => safety['deviceSms'] = v);
+        unawaited(saveSafety());
+      },
     ),
     TextFormField(
       initialValue: safety['alertToken']?.toString() ?? '',
@@ -1651,6 +1838,31 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       'ACCESSIBILITY & PRIVACY',
       'Make it yours',
       'Set your country manually. GPS alone never decides an emergency jurisdiction.',
+    ),
+    DropdownButtonFormField<String>(
+      key: ValueKey('language-$languageCode'),
+      initialValue: languageCode,
+      isExpanded: true,
+      decoration: InputDecoration(labelText: t('Language')),
+      items: AppLanguages.languages
+          .map(
+            (l) => DropdownMenuItem<String>(
+              value: l['code'] as String,
+              child: Text(l['name'] as String),
+            ),
+          )
+          .toList(),
+      onChanged: (value) {
+        if (value == null) return;
+        setState(() => languageCode = value);
+        unawaited(prefs?.setString('language', value));
+      },
+    ),
+    const Padding(
+      padding: EdgeInsets.symmetric(vertical: 12),
+      child: Text(
+        '32 languages for core navigation and SOS labels. Official service descriptions and detailed instructions retain their original wording. Device speech language packs are separate.',
+      ),
     ),
     DropdownButtonFormField<String>(
       initialValue: country,
@@ -1875,6 +2087,12 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     ];
     return MaterialApp(
       navigatorKey: navigatorKey,
+      builder: (context, child) => Directionality(
+        textDirection: AppLanguages.get(languageCode)['direction'] == 'rtl'
+            ? TextDirection.rtl
+            : TextDirection.ltr,
+        child: child!,
+      ),
       title: 'Global SOS AI',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -1883,9 +2101,22 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         scaffoldBackgroundColor: light
             ? const Color(0xfff4f5f8)
             : const Color(0xff0b1221),
-        inputDecorationTheme: InputDecorationTheme(filled:true, border:OutlineInputBorder(borderRadius:BorderRadius.circular(14), borderSide:BorderSide.none)),
-        filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(minimumSize:const Size(48,50), shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(14)))),
-        appBarTheme: const AppBarTheme(centerTitle:false, elevation:0),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide.none,
+          ),
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            minimumSize: const Size(48, 50),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+        ),
+        appBarTheme: const AppBarTheme(centerTitle: false, elevation: 0),
         cardTheme: CardThemeData(
           elevation: 0,
           margin: const EdgeInsets.only(bottom: 14),
@@ -1984,26 +2215,26 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
           bottomNavigationBar: NavigationBar(
             selectedIndex: page > 4 ? 0 : page,
             onDestinationSelected: (v) => setState(() => page = v),
-            destinations: const [
+            destinations: [
               NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                label: 'Home',
+                icon: const Icon(Icons.home_outlined),
+                label: t('Home'),
               ),
               NavigationDestination(
-                icon: Icon(Icons.sos_outlined),
-                label: 'SOS',
+                icon: const Icon(Icons.emergency_outlined),
+                label: t('SOS'),
               ),
               NavigationDestination(
-                icon: Icon(Icons.auto_awesome_outlined),
-                label: 'Assistant',
+                icon: const Icon(Icons.auto_awesome_outlined),
+                label: t('AI Assistant'),
               ),
               NavigationDestination(
-                icon: Icon(Icons.grid_view_outlined),
-                label: 'Directory',
+                icon: const Icon(Icons.grid_view_outlined),
+                label: t('All Helplines'),
               ),
               NavigationDestination(
-                icon: Icon(Icons.shield_outlined),
-                label: 'My Safety',
+                icon: const Icon(Icons.shield_outlined),
+                label: t('My Safety'),
               ),
             ],
           ),
@@ -2013,7 +2244,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
                 const DrawerHeader(child: Text('Global SOS AI')),
                 for (var i = 0; i < titles.length; i++)
                   ListTile(
-                    title: Text(titles[i]),
+                    title: Text(t(titles[i])),
                     onTap: () {
                       Navigator.pop(ctx);
                       setState(() => page = i);

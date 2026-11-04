@@ -1,4 +1,4 @@
-const CACHE='global-sos-static-v4';
+const CACHE='global-sos-static-v41';
 self.addEventListener('install',event=>{self.skipWaiting();});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('global-sos-static-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',event=>{const u=new URL(event.request.url);if(event.request.method!=='GET'||u.origin!==location.origin||u.pathname.startsWith('/api')||u.pathname.startsWith('/downloads/')||u.pathname==='/health'||u.pathname==='/ready')return;event.respondWith(fetch(event.request).then(response=>{if(response.ok){const copy=response.clone();caches.open(CACHE).then(c=>c.put(event.request,copy));}return response;}).catch(()=>caches.match(event.request).then(hit=>hit||new Response('Offline. Reopen the app after a successful first online load.',{status:503,headers:{'Content-Type':'text/plain'}}))));});

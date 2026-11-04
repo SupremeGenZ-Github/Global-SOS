@@ -1,3 +1,7 @@
+# Global SOS v4.1
+
+[PostgreSQL setup and connection repair](Global-SOS-AI-Full-Project/docs/V41-SETUP.md) · [Source](Global-SOS-AI-Full-Project)
+
 # Global SOS v4
 
 The v4 source connects the native Android app to **https://global-sos.onrender.com** automatically, adds SOS permission choices, fresh-location trusted alerts, optional SIM SMS, contact import, clearer status and updated UI.
