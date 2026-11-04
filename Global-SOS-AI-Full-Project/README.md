@@ -18,6 +18,14 @@ Global SOS is a Flutter Android app, React website, and Node.js API for finding 
 | Check-ins and emergency cards | Schedule a check-in for an invited contact, mark yourself safe, or use a locally stored emergency card. A running backend processes missed check-ins. |
 | Desktop and mobile | The website offers a desktop console and a phone-style layout. Both the website and Android have light and dark themes. |
 
+## Trip tools on the website
+
+Open **My Safety** to prepare a trip plan with a destination, route, backup meeting point, and check-in time. Preview the text before sharing. You can save or clear the plan in the current browser, share it through another app, copy it where supported, or download it as a text file. Saved plans use unencrypted browser storage.
+
+- **Calendar reminder.** Download the `.ics` file, import it into your calendar, and confirm the reminder. This is a personal reminder. For a missed check-in alert to an invited contact, use the separate server-backed check-in feature.
+- **Trusted-contact export.** Download an individual contact as a `.vcf` file under **Edit trusted contacts**. The file contains the contact's name and phone number.
+- **SOS practice.** Run or cancel a five-second countdown on the web page. The drill has no call, message, location, or permission action.
+
 ## Install Android
 
 1. Open the [v5 Actions workflow](https://github.com/SupremeGenZ-Github/Global-SOS/actions/workflows/v4.yml) and select a successful run for the commit you want.
