@@ -1,4 +1,4 @@
-# Global SOS v4.1
+# Global SOS v4.12
 
 Connection recovery, 32-language core navigation, clearer online status and an emergency-siren website interface. [Read the setup guide](docs/V41-SETUP.md).
 
