@@ -1,0 +1,62 @@
+:root {
+  --bg:#050505; --panel:#101010; --panel2:#181818; --input:#101010;
+  --line:#343942; --text:#f5f7fb; --muted:#b3bdcc; --accent:#ff626a;
+  --v5-blue:#619aff; --v5-red:#ff626a;
+}
+html[data-theme="light"] {
+  --bg:#fff; --panel:#fff; --panel2:#f1f6ff; --input:#fff;
+  --line:#cfdaee; --text:#152342; --muted:#52627e; --accent:#b91c32;
+  --v5-blue:#1455bf; --v5-red:#b91c32;
+}
+body, html[data-theme="light"] body {background:var(--bg);color:var(--text)}
+.app-shell aside, .main-column>header, html[data-theme="light"] .app-shell aside,
+html[data-theme="light"] .main-column>header {background:var(--panel);border-color:var(--line)}
+.app-shell .service-card, .app-shell .sos-panel, .app-shell .assistant-panel,
+html[data-theme="light"] .app-shell .sos-panel, html[data-theme="light"] .app-shell .assistant-panel {
+  background:var(--panel);border-color:var(--line);color:var(--text)
+}
+.app-shell .assistant-panel {border-inline-start:4px solid var(--v5-blue)}
+.app-shell .sos-panel {border-inline-start:4px solid var(--v5-red)}
+.app-shell .sos-panel p {color:var(--muted)}
+.app-shell nav button.active {color:var(--v5-blue);background:var(--panel2)}
+.app-shell a:not(.contact):not(.brand) {color:var(--v5-blue)}
+.desktop-console {display:none}
+.console-hero {display:flex;align-items:center;justify-content:space-between;gap:24px;padding:32px;border:1px solid var(--line);border-radius:24px;background:var(--panel2)}
+.console-hero h1 {font-size:clamp(2.2rem,5vw,4.6rem);margin:8px 0;line-height:1}
+.console-metrics {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0}
+.console-metrics article {padding:16px;border-radius:14px;border:1px solid var(--line);background:var(--panel);display:grid;gap:8px}
+.console-metrics span {color:var(--muted)}
+.console-metrics strong {color:var(--v5-blue);overflow-wrap:anywhere}
+.console-grid {display:grid;grid-template-columns:minmax(0,2fr) minmax(220px,1fr);gap:16px}
+.console-grid table {width:100%;border-collapse:collapse;margin-bottom:16px}
+.console-grid :is(th,td) {padding:10px;text-align:start;border-bottom:1px solid var(--line)}
+.console-actions {display:flex;flex-direction:column;gap:10px;align-self:start}
+.v5-safety-hub {display:grid;gap:14px;margin-block:18px}
+.v5-safety-hub :is(input,select) {width:100%;margin-block:6px}
+.share-preview {white-space:pre-wrap;overflow-wrap:anywhere;background:var(--panel2);padding:12px;border-radius:10px}
+.v5-safety-hub .button-row {flex-wrap:wrap}
+.layout-desktop .desktop-console {display:block}
+.layout-desktop .phone-home {display:none}
+.layout-mobile .desktop-console {display:none}
+@media(min-width:960px) {
+  .layout-auto .desktop-console {display:block}
+  .layout-auto .phone-home {display:none}
+  .layout-auto .v5-safety-hub, .layout-desktop .v5-safety-hub {grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+.layout-mobile.app-shell {display:block;max-width:560px;margin:auto}
+.layout-mobile .main-column {margin:0;width:100%;padding-bottom:90px}
+.layout-mobile aside {position:fixed;inset:auto 0 0;width:100%;height:auto;z-index:20;border:0;border-top:1px solid var(--line);padding:6px 8px}
+.layout-mobile aside>:not(nav) {display:none}
+.layout-mobile aside nav {display:flex;overflow:auto;gap:4px;max-width:560px;margin:auto}
+.layout-mobile aside nav button {display:flex;flex-direction:column;justify-content:center;min-width:72px;min-height:52px;font-size:11px;gap:4px}
+@media(max-width:959px) {
+  .layout-auto.app-shell {display:block}
+  .layout-auto .main-column {margin:0;width:100%;padding-bottom:90px}
+  .layout-auto aside {position:fixed;inset:auto 0 0;width:100%;height:auto;z-index:20;border:0;border-top:1px solid var(--line);padding:6px 8px}
+  .layout-auto aside>:not(nav) {display:none}
+  .layout-auto aside nav {display:flex;overflow:auto;gap:4px;margin:0}
+  .layout-auto aside nav button {display:flex;flex-direction:column;justify-content:center;min-width:72px;min-height:52px;font-size:11px;gap:4px}
+  .console-grid {grid-template-columns:1fr}
+  .console-metrics {grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media print { .v5-safety-hub,.desktop-console {display:none!important} }

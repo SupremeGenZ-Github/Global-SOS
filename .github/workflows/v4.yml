@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 defaults:
   run:
-    working-directory: Global-SOS-AI-Full-Project
+    working-directory: .
 jobs:
   web-backend:
     runs-on: ubuntu-latest
@@ -51,15 +51,15 @@ jobs:
       - run: sdkmanager 'platforms;android-36' 'platforms;android-35' 'platforms;android-34' 'build-tools;36.0.0' 'ndk;28.2.13676358' 'cmake;3.22.1'
       - run: chmod +x android/android/gradlew
       - run: flutter pub get --enforce-lockfile
-        working-directory: Global-SOS-AI-Full-Project/android
+        working-directory: android
       - run: flutter analyze
-        working-directory: Global-SOS-AI-Full-Project/android
+        working-directory: android
       - run: flutter test
-        working-directory: Global-SOS-AI-Full-Project/android
+        working-directory: android
       - run: flutter build apk --release --target-platform android-arm64 --dart-define=API_BASE_URL=https://global-sos.onrender.com
-        working-directory: Global-SOS-AI-Full-Project/android
+        working-directory: android
       - run: flutter build appbundle --release --target-platform android-arm64 --dart-define=API_BASE_URL=https://global-sos.onrender.com
-        working-directory: Global-SOS-AI-Full-Project/android
+        working-directory: android
       - name: Verify artifacts
         run: |
           mkdir -p artifacts
@@ -74,7 +74,7 @@ jobs:
           node-version: '24.21.0'
       - name: Package website with verified v5 APK
         env:
-          PACKAGE_OUTPUT_DIR: ${{ github.workspace }}/Global-SOS-AI-Full-Project/artifacts/packages
+          PACKAGE_OUTPUT_DIR: ${{ github.workspace }}/artifacts/packages
         run: |
           npm ci --include=dev
           node scripts/stage-ci-release.mjs artifacts/Global-SOS-v5-TEST-SIGNED.apk
@@ -85,5 +85,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: Global-SOS-v5-Android
-          path: Global-SOS-AI-Full-Project/artifacts/
+
           if-no-files-found: error
+
