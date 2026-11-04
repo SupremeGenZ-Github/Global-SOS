@@ -8,6 +8,7 @@ import {resolve,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {categories,categoryIds,classify,everydayReply,urgent,filterRecords,responseFor,safeIntent,validateChannel,equalSecret,sha} from './core.mjs';
 import {seed,snapshot,propose,approve,audit,createSOS} from './store.mjs';
+import {mountSafetyTools} from './safety-tools.mjs';
 const recordSchema=z.object({id:z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/),country:z.enum(seed.countries.map(c=>c.code)),source_id:z.string().max(100),source_url:z.url().startsWith('https://'),name:z.string().min(2).max(200),categories:z.array(z.enum(categoryIds)).min(1),channels:z.array(z.object({kind:z.enum(['phone','sms','whatsapp','email','web']),value:z.string().max(500),immediate:z.boolean(),notes:z.string().max(1000).nullable().optional()}).refine(validateChannel)).min(1).max(8),region:z.string().max(200).nullable(),city:z.string().max(200).nullable(),jurisdiction:z.string().max(1000),hours:z.string().max(300).nullable(),languages:z.array(z.string().max(40)).nullable(),accessibility:z.string().max(1000).nullable(),notes:z.string().max(2000).nullable(),checked_at:z.string().datetime(),verification_status:z.enum(['source_checked','admin_approved']),last_successful_verification:z.string().datetime().nullable(),published:z.boolean().optional()});
 export function createApp({pool=null,env=process.env,dbRequired=false}={}){
  env={APP_BASE_URL:'https://global-sos.onrender.com',CORS_ORIGINS:'https://global-sos.onrender.com',...env};
@@ -18,6 +19,7 @@ export function createApp({pool=null,env=process.env,dbRequired=false}={}){
  const run=fn=>async(req,res,next)=>{try{await fn(req,res);}catch(e){next(e);}};
  const withDB=async fn=>{if(!pool)throw Object.assign(new Error('This operation requires a healthy PostgreSQL connection'),{status:503});const c=await pool.connect();try{return await fn(c);}finally{c.release();}};
  const databaseReady=()=>!!pool&&(pool.isReady?pool.isReady():true);
+ mountSafetyTools(app, {run, withDB});
  const databaseStatus=()=>pool?.status?.()??{configured:dbRequired||!!pool,ready:databaseReady(),state:databaseReady()?'connected':dbRequired?'unavailable':'not_configured'};
  let lastSnapshot=null;
  const readSnapshot=async()=>{
@@ -29,10 +31,10 @@ export function createApp({pool=null,env=process.env,dbRequired=false}={}){
  app.get('/api/releases/android',downloads.metadata);
  app.get('/downloads/Global-SOS-AI.apk',downloads.apk);
  app.get('/downloads/Global-SOS-AI.apk.sha256',downloads.checksum);
- app.get('/health',(req,res)=>res.json({status:'alive',version:'0.4.1'}));
+ app.get('/health',(req,res)=>res.json({status:'alive',version:'0.5.0'}));
  app.get('/ready',run(async(req,res)=>{let available=databaseReady();if(available)try{await withDB(db=>db.query('SELECT 1'));}catch{available=false;}res.status(dbRequired&&!available?503:200).json({status:dbRequired&&!available?'database_unavailable':'ready',storage:available?'postgresql':'read_only_snapshot',directory_available:true,database:databaseStatus(),generative_ai:env.AI_PROVIDER==='openai-compatible'?'configured_not_health_checked':'not_configured'});}));
- app.get('/api/status',(req,res)=>res.json({version:'0.4.1',server:'online',directory:'available',database:databaseStatus(),live_sessions_enabled:databaseReady(),online_ai:env.AI_PROVIDER==='openai-compatible'?'configured':'not_configured'}));
- app.get('/api/config',(req,res)=>res.json({app_base_url:env.APP_BASE_URL,version:'0.4.1',categories,countries:seed.countries,ai_configured:env.AI_PROVIDER==='openai-compatible',accounts_enabled:false,notifications:notificationConfig(env),live_sessions_enabled:databaseReady()}));
+ app.get('/api/status',(req,res)=>res.json({version:'0.5.0',server:'online',directory:'available',database:databaseStatus(),live_sessions_enabled:databaseReady(),online_ai:env.AI_PROVIDER==='openai-compatible'?'configured':'not_configured'}));
+ app.get('/api/config',(req,res)=>res.json({app_base_url:env.APP_BASE_URL,version:'0.5.0',categories,countries:seed.countries,ai_configured:env.AI_PROVIDER==='openai-compatible',accounts_enabled:false,notifications:notificationConfig(env),live_sessions_enabled:databaseReady()}));
  app.get('/api/directory',run(async(req,res)=>{const s=await readSnapshot();const version=String(s.version);if(s.authoritative&&req.query.version===version)return res.json({unchanged:true,version,authoritative:true,storage:s.storage});res.json(s);}));
  app.get('/api/helplines',run(async(req,res)=>{const q=z.object({country:z.enum(seed.countries.map(c=>c.code)),category:z.enum(categoryIds).optional(),q:z.string().max(200).optional(),channel:z.enum(['phone','sms','whatsapp','email','web']).optional(),region:z.string().max(200).optional()}).parse(req.query);const s=await readSnapshot();res.json({records:filterRecords(s.records,q),version:s.version});}));
  app.post('/api/chat',rateLimit({windowMs:60000,limit:15,standardHeaders:'draft-8',legacyHeaders:false}),run(async(req,res)=>{

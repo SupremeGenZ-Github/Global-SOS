@@ -1,5 +1,11 @@
 # Optional local model
 
+Global SOS also bundles a small, English-focused intent classifier trained on
+synthetic examples in `shared/intent-training.json`. Run
+`npm run train:intents` to regenerate the weights for Android and the server.
+Emergency rules take priority and the classifier abstains on weak matches.
+The training script updates the lightweight classifier only.
+
 Model metadata is authoritative in `android/assets/model.json`: HuggingFaceTB SmolLM2-360M-Instruct-GGUF, Q8_0, 386,404,992 bytes, Apache-2.0, pinned revision and SHA-256. The normal app includes the directory and fallback rules but downloads model weights only when requested in Settings. Tap Download, wait for verification, then Load model. Chat routing uses it only in offline mode when deterministic emergency rules did not already match.
 
 The model classifies intent. Freeform generated numbers, URLs or medical advice are never displayed. English-focused; no validated multilingual capability. CPU-only, ARM64 Android 8+ for this plugin. Memory, temperature, model latency and actual device compatibility require testing; more available memory improves reliability. Directory/SOS shortcuts remain independent of model success.

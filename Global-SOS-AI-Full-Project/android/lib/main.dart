@@ -9,6 +9,9 @@ import 'services.dart';
 import 'localization.dart';
 import 'device_tools.dart';
 import 'safety_checklist.dart';
+import 'intent_model.dart';
+import 'sos_practice.dart';
+import 'safety_hub.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -97,6 +100,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       s['history'] = s['history'] is List ? s['history'] : <dynamic>[];
       final p = await SharedPreferences.getInstance();
       await AppLanguages.load();
+      await IntentModel.load();
       final c =
           await (widget.categoryLoader?.call() ??
               rootBundle
@@ -552,8 +556,8 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
   }
 
   String get alertMessage =>
-      'I activated Global SOS AI and need help. Please contact me.'
-      '${locationConsent && position != null ? ' Location: https://maps.google.com/?q=${position!.latitude},${position!.longitude}' : ''}'
+      '${silentMode ? 'Please check in with me when you can.' : 'I activated Global SOS AI and need help. Please contact me.'}'
+      '${locationConsent && position != null ? ' ${DateTime.now().difference(position!.timestamp).inMinutes >= 2 ? 'Last known location' : 'Location'} from ${position!.timestamp.toUtc().toIso8601String()}: https://maps.google.com/?q=${position!.latitude},${position!.longitude}' : ''}'
       '${sharing ? ' Private session: $privateLink' : ''}';
 
   Future<void> notifyContacts({Set<String> skipSms = const {}}) async {
@@ -618,7 +622,26 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         capability: session!['capability'],
       );
       if (mounted) {
-        setState(() => alertResults = (r['results'] as List).cast<Json>());
+        final updates = (r['results'] as List).cast<Json>();
+        bool matches(Json a, Json b) =>
+            a['recipient_hash'] != null &&
+            a['recipient_hash'] == b['recipient_hash'] &&
+            a['kind'] == b['kind'];
+        setState(
+          () => alertResults = [
+            for (final old in alertResults)
+              {
+                ...old,
+                ...updates.firstWhere(
+                  (update) => matches(old, update),
+                  orElse: () => {},
+                ),
+              },
+            ...updates.where(
+              (update) => !alertResults.any((old) => matches(old, update)),
+            ),
+          ],
+        );
       }
     } catch (_) {
       note('Could not refresh provider status. Last reported state retained.');
@@ -826,11 +849,15 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       conversation.add({'text': text, 'user': true});
     });
     String intent = classify(text);
-    String mode = 'Offline rules (not an LLM)';
+    final learnedIntent = intent == 'other' ? IntentModel.predict(text) : null;
+    intent = learnedIntent ?? intent;
+    String mode = learnedIntent == null
+        ? 'Offline rules (not an LLM)'
+        : 'Offline trained intent model';
     List<Json> selected = [];
     String? answer;
     try {
-      if (allowOnline) {
+      if (allowOnline && !isUrgent(text) && learnedIntent == null) {
         if (serverInput.text.isEmpty) throw StateError('Set server URL');
         final data = await api.call(
           '/chat',
@@ -1204,7 +1231,54 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     heading(
       'ONE TAP. ONE CONVERSATION.',
       'Help is closer\nthan you think.',
-      'Find the right service. Make the next step clear.',
+      'Find emergency contacts and prepare your safety plan.',
+    ),
+    Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Emergency readiness',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              country.isEmpty
+                  ? 'Choose your country to see local services.'
+                  : 'Country: $country',
+            ),
+            Text(
+              directory == null
+                  ? 'Loading the directory'
+                  : 'Saved directory available offline',
+            ),
+            Text('Trusted contacts: ${(safety['contacts'] as List).length}'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () =>
+                      setState(() => page = country.isEmpty ? 5 : 4),
+                  icon: const Icon(Icons.shield_outlined),
+                  label: Text(country.isEmpty ? 'Choose country' : 'My Safety'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => showDialog<void>(
+                    context: navigatorKey.currentContext!,
+                    builder: (_) => const SosPractice(),
+                  ),
+                  icon: const Icon(Icons.timer_outlined),
+                  label: const Text('Practice SOS'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     ),
     Card(
       color: const Color(0xff241c2c),
@@ -1456,6 +1530,52 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       'Safety assistant',
       'Confirm your country. Avoid unnecessary personal details.',
     ),
+    ExpansionTile(
+      title: const Text('Help me choose'),
+      children: [
+        for (final (label, value) in [
+          ('Medical emergency', 'ambulance'),
+          ('Fire and rescue', 'fire'),
+          ('Personal safety', 'police'),
+          ('Online fraud', 'cyber'),
+          ('Domestic violence', 'domestic'),
+          ('Child protection', 'child'),
+        ])
+          ListTile(
+            title: Text(label),
+            onTap: () => setState(() {
+              category = value;
+              page = 3;
+            }),
+          ),
+      ],
+    ),
+    if (conversation.isEmpty)
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final (label, example) in [
+            ('Medical', 'Someone collapsed and will not wake up.'),
+            ('Fire', 'There is smoke in my building.'),
+            ('Personal safety', 'Someone is threatening me.'),
+            ('Online fraud', 'A fake payment link stole my card details.'),
+          ])
+            ActionChip(
+              label: Text(label),
+              onPressed: () => chatInput.text = example,
+            ),
+        ],
+      ),
+    if (conversation.isNotEmpty && !busy)
+      Align(
+        alignment: AlignmentDirectional.centerEnd,
+        child: TextButton.icon(
+          onPressed: () => setState(conversation.clear),
+          icon: const Icon(Icons.delete_outline),
+          label: const Text('Clear conversation'),
+        ),
+      ),
     SwitchListTile(
       contentPadding: EdgeInsets.zero,
       title: const Text('Allow online AI routing'),
@@ -1742,6 +1862,39 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     ),
   );
 
+  void showEmergencyCard() {
+    final contacts = (safety['contacts'] as List)
+        .cast<Json>()
+        .map((contact) => '${contact['name']}: ${contact['phone']}')
+        .join('\n');
+    final card =
+        'Global SOS emergency card\nCountry: $country\nPreferred language: $languageCode\n'
+        'Trusted contacts:\n$contacts\nMedical notes: ${safety['medical'] ?? ''}';
+    showDialog<void>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Offline emergency card'),
+        content: SingleChildScrollView(child: SelectableText(card)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog),
+            child: const Text('Close'),
+          ),
+          TextButton(
+            onPressed: () async {
+              try {
+                await DeviceTools.shareText(card);
+              } catch (_) {
+                note('Could not open the share sheet.');
+              }
+            },
+            child: const Text('Share card'),
+          ),
+        ],
+      ),
+    );
+  }
+
   List<Widget> safetyPage() => [
     heading(
       'YOUR PERSONAL SAFETY SPACE',
@@ -1760,6 +1913,22 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     ),
     ...(safety['contacts'] as List).cast<Json>().map(
       (c) => trustedContact(c, controls: true),
+    ),
+    SafetyHub(
+      api: api,
+      contacts: (safety['contacts'] as List).cast<Json>(),
+      quiet: silentMode,
+      inbox: safety['inbox'] as Json?,
+      onInbox: (value) async {
+        if (!mounted) return;
+        setState(() => safety['inbox'] = value);
+        await saveSafety();
+      },
+    ),
+    OutlinedButton.icon(
+      onPressed: showEmergencyCard,
+      icon: const Icon(Icons.badge_outlined),
+      label: const Text('View offline emergency card'),
     ),
     const SizedBox(height: 20),
     TextFormField(
@@ -2067,13 +2236,16 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final darkScheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xffed6860),
+      seedColor: const Color(0xff619aff),
       brightness: Brightness.dark,
-      surface: const Color(0xff101b2d),
+      surface: const Color(0xff101010),
+      error: const Color(0xffff626a),
     );
     final scheme = light
         ? ColorScheme.fromSeed(
-            seedColor: const Color(0xffbd3c35),
+            seedColor: const Color(0xff1455bf),
+            surface: Colors.white,
+            error: const Color(0xffb91c32),
             brightness: Brightness.light,
           )
         : darkScheme;
@@ -2098,9 +2270,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: scheme,
-        scaffoldBackgroundColor: light
-            ? const Color(0xfff4f5f8)
-            : const Color(0xff0b1221),
+        scaffoldBackgroundColor: light ? Colors.white : Colors.black,
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           border: OutlineInputBorder(

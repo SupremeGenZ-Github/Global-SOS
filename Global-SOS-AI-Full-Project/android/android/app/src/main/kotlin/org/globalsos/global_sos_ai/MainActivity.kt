@@ -28,6 +28,14 @@ class MainActivity : FlutterActivity() {
         MethodChannel(engine.dartExecutor.binaryMessenger, "org.globalsos/device").setMethodCallHandler { call, result ->
             try {
                 when (call.method) {
+                    "shareText" -> {
+                        val share = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, call.argument<String>("text") ?: "")
+                        }
+                        startActivity(Intent.createChooser(share, "Share with"))
+                        result.success(null)
+                    }
                     "pickContact" -> {
                         if (contactResult != null) result.error("BUSY", "Contact picker already open", null)
                         else {

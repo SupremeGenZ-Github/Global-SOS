@@ -1,18 +1,19 @@
 {
   "name": "global-sos-ai",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "engines": {
     "node": ">=22 <25"
   },
   "scripts": {
-    "dev": "node --env-file-if-exists=.env backend/server.mjs",
-    "start": "node --env-file-if-exists=.env backend/server.mjs",
+    "dev": "node --env-file-if-exists=.env --env-file-if-exists=.env.local backend/server.mjs",
+    "start": "node --env-file-if-exists=.env --env-file-if-exists=.env.local backend/server.mjs",
     "build": "npm run prepare:download && tsc --noEmit -p website/tsconfig.json && vite build --config website/vite.config.ts",
     "test": "node --test tests/*.test.mjs",
-    "migrate": "node --env-file-if-exists=.env backend/migrate.mjs",
-    "monitor": "node --env-file-if-exists=.env backend/monitor.mjs",
+    "train:intents": "node scripts/train-intents.mjs",
+    "migrate": "node --env-file-if-exists=.env --env-file-if-exists=.env.local backend/migrate.mjs",
+    "monitor": "node --env-file-if-exists=.env --env-file-if-exists=.env.local backend/monitor.mjs",
     "prepare:android": "node scripts/prepare-android.mjs",
     "prepare:download": "node scripts/prepare-download.mjs",
     "prestart": "npm run prepare:download"

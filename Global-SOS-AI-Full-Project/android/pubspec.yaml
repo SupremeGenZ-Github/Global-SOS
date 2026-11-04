@@ -1,7 +1,7 @@
 name: global_sos_ai
 description: Government-source emergency contacts and personal safety tools.
 publish_to: none
-version: 0.4.1+5
+version: 0.5.0+7
 environment:
   sdk: '>=3.8.0 <4.0.0'
 dependencies:
@@ -26,6 +26,7 @@ flutter:
   assets:
     - assets/directory.json
     - assets/languages.json
+    - assets/intent-model.json
     - assets/categories.json
     - assets/assistant-faq.json
     - assets/model.json

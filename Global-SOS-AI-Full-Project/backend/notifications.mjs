@@ -12,7 +12,7 @@ export async function sendNotifications({db,env,session,clientToken,contacts,mes
   if(!config.methods[kind]){results.push({kind,recipient,status:'not_configured'});continue;}
   // Reserve before network I/O: a retry after a timeout must not duplicate an alert.
   const inserted=await db.query("INSERT INTO notification_attempts(session_id,recipient_hash,kind,status) VALUES($1,$2,$3,'submitting') ON CONFLICT DO NOTHING RETURNING status",[session.id,key,kind]);
-  if(!inserted.rows.length){const old=(await db.query('SELECT status FROM notification_attempts WHERE session_id=$1 AND recipient_hash=$2 AND kind=$3',[session.id,key,kind])).rows[0];results.push({kind,recipient,status:old?.status??'unknown'});continue;}
+  if(!inserted.rows.length){const old=(await db.query('SELECT status FROM notification_attempts WHERE session_id=$1 AND recipient_hash=$2 AND kind=$3',[session.id,key,kind])).rows[0];results.push({kind,recipient,recipient_hash:key,status:old?.status??'unknown'});continue;}
   let status='unknown',providerId=null;
   try{
    let response;
@@ -26,7 +26,7 @@ export async function sendNotifications({db,env,session,clientToken,contacts,mes
    if(response.ok){status=kind==='email'?'accepted':String(data.status??'accepted');providerId=data.sid??data.id??null;}else status='failed';
   }catch{status='unknown';}
   await db.query('UPDATE notification_attempts SET status=$4,provider_id=$5 WHERE session_id=$1 AND recipient_hash=$2 AND kind=$3',[session.id,key,kind,status,providerId]);
-  results.push({kind,recipient,status});
+  results.push({kind,recipient,recipient_hash:key,status});
  }
  return results;
 }
