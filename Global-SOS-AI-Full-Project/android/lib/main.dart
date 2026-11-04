@@ -13,6 +13,24 @@ import 'intent_model.dart';
 import 'sos_practice.dart';
 import 'safety_hub.dart';
 
+const officialServer = 'https://global-sos.onrender.com';
+const configuredServer = String.fromEnvironment(
+  'API_BASE_URL',
+  defaultValue: officialServer,
+);
+
+String resolveServer(String? saved) {
+  final value = saved?.trim() ?? '';
+  if (value.isEmpty) {
+    return configuredServer.trim().isEmpty ? officialServer : configuredServer;
+  }
+  final host = value
+      .toLowerCase()
+      .replaceFirst(RegExp(r'^https?://'), '')
+      .replaceFirst(RegExp(r'/+$'), '');
+  return host == 'global-sos.onrender.com' ? officialServer : value;
+}
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const GlobalSOS());
@@ -41,7 +59,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
   final model = OfflineModel();
   final chatInput = TextEditingController();
   final queryInput = TextEditingController();
-  final serverInput = TextEditingController();
+  final serverInput = TextEditingController(text: resolveServer(null));
   SharedPreferences? prefs;
   Json? directory;
   Json safety = {'contacts': <dynamic>[], 'history': <dynamic>[]};
@@ -79,7 +97,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
   int sosGeneration = 0, locationGeneration = 0;
   DateTime? lastSync;
   Future<void>? pendingLocation;
-  Api get api => Api(serverInput.text.trim());
+  Api get api => Api(resolveServer(serverInput.text));
   @override
   void initState() {
     super.initState();
@@ -120,14 +138,10 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         voiceLanguage = p.getString('voiceLanguage') ?? 'en-IN';
         silentMode = p.getBool('silentMode') ?? false;
         addressConsent = p.getBool('addressConsent') ?? false;
-        serverInput.text =
-            p.getString('server') ??
-            const String.fromEnvironment(
-              'API_BASE_URL',
-              defaultValue: 'https://global-sos.onrender.com',
-            );
-        if (serverInput.text.trim().isEmpty) {
-          serverInput.text = 'https://global-sos.onrender.com';
+        final savedServer = p.getString('server');
+        serverInput.text = resolveServer(savedServer);
+        if (savedServer != null && savedServer != serverInput.text) {
+          unawaited(p.setString('server', serverInput.text));
         }
         status = 'Offline directory ready · version ${d['version']}';
       });
@@ -776,7 +790,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
 
   String get privateLink => session == null
       ? ''
-      : '${serverInput.text.replaceAll(RegExp(r'/+$'), '')}/#share=${session!['id']}.${session!['capability']}';
+      : '${resolveServer(serverInput.text).replaceAll(RegExp(r'/+$'), '')}/#share=${session!['id']}.${session!['capability']}';
   Future<void> finish(String result) async {
     ++sosGeneration;
     ++locationGeneration;
@@ -1162,7 +1176,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label,
+          t(label),
           style: const TextStyle(
             color: Color(0xffe99088),
             fontSize: 11,
@@ -1180,7 +1194,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
           ),
         ),
         const SizedBox(height: 12),
-        Text(description, style: const TextStyle(fontSize: 13, height: 1.6)),
+        Text(t(description), style: const TextStyle(fontSize: 13, height: 1.6)),
       ],
     ),
   );
@@ -1229,9 +1243,9 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
   );
   List<Widget> home() => [
     heading(
-      'ONE TAP. ONE CONVERSATION.',
+      'Home',
       'Help is closer\nthan you think.',
-      'Find emergency contacts and prepare your safety plan.',
+      'Find the right service. Make the next step clear.',
     ),
     Card(
       child: Padding(
@@ -1372,7 +1386,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
   ];
   List<Widget> sos() => [
     heading(
-      'YOU STAY IN CONTROL',
+      'Emergency controls',
       'Emergency controls',
       'After five seconds, opens the verified emergency number in your phone dialer. Press Call there. Cancel below to stop.',
     ),
@@ -1526,12 +1540,12 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
   ];
   List<Widget> chat() => [
     heading(
-      'FIND YOUR NEXT STEP',
-      'Safety assistant',
-      'Confirm your country. Avoid unnecessary personal details.',
+      'AI Assistant',
+      'AI Assistant',
+      'Confirm your country. Describe the help you need.',
     ),
     ExpansionTile(
-      title: const Text('Help me choose'),
+      title: Text(t('Help me choose')),
       children: [
         for (final (label, value) in [
           ('Medical emergency', 'ambulance'),
@@ -1692,8 +1706,8 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     ).where((r) => !favoritesOnly || favorites.contains(r['id'])).toList();
     return [
       heading(
-        'OFFICIAL SOURCES. CLEAR CHOICES.',
-        'All helplines',
+        'All Helplines',
+        'All Helplines',
         'Government sources and verification dates on every service card.',
       ),
       TextField(
@@ -1897,8 +1911,8 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
 
   List<Widget> safetyPage() => [
     heading(
-      'YOUR PERSONAL SAFETY SPACE',
-      'My safety',
+      'My Safety',
+      'My Safety',
       'Contacts are stored in encrypted device storage. No account required.',
     ),
     FilledButton.icon(
@@ -1916,6 +1930,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     ),
     SafetyHub(
       api: api,
+      t: t,
       contacts: (safety['contacts'] as List).cast<Json>(),
       quiet: silentMode,
       inbox: safety['inbox'] as Json?,
@@ -2004,8 +2019,8 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
   ];
   List<Widget> settings() => [
     heading(
-      'ACCESSIBILITY & PRIVACY',
-      'Make it yours',
+      'Settings',
+      'Settings',
       'Set your country manually. GPS alone never decides an emergency jurisdiction.',
     ),
     DropdownButtonFormField<String>(
@@ -2124,7 +2139,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       icon: const Icon(Icons.download_outlined),
       label: const Text('Open website APK download page'),
       onPressed: () async {
-        final base = serverInput.text.trim().replaceAll(RegExp(r'/+$'), '');
+        final base = resolveServer(serverInput.text).replaceAll(RegExp(r'/+$'), '');
         final uri = Uri.tryParse(base);
         if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
           note('Enter your HTTPS website/backend URL first.');
@@ -2138,7 +2153,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       keyboardType: TextInputType.url,
       decoration: const InputDecoration(
         labelText: 'HTTPS Render server URL',
-        hintText: 'https://your-service.onrender.com',
+        hintText: officialServer,
         border: OutlineInputBorder(),
       ),
       onChanged: (v) => unawaited(prefs?.setString('server', v.trim())),

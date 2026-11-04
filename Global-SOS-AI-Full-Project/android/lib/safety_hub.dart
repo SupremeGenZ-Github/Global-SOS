@@ -10,12 +10,14 @@ class SafetyHub extends StatefulWidget {
   const SafetyHub({
     super.key,
     required this.api,
+    required this.t,
     required this.contacts,
     required this.quiet,
     required this.inbox,
     required this.onInbox,
   });
   final Api api;
+  final String Function(String) t;
   final List<Json> contacts;
   final bool quiet;
   final Json? inbox;
@@ -142,10 +144,10 @@ class _SafetyHubState extends State<SafetyHub> {
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       const Divider(),
-      Text('Safety tools', style: Theme.of(context).textTheme.titleLarge),
+      Text(widget.t('Safety tools'), style: Theme.of(context).textTheme.titleLarge),
       OutlinedButton(
         onPressed: busy ? null : () => perform(locate),
-        child: const Text('Get current location'),
+        child: Text(widget.t('Get current location')),
       ),
       if (fix != null) ...[
         SelectableText(location),
@@ -153,7 +155,7 @@ class _SafetyHubState extends State<SafetyHub> {
           contentPadding: EdgeInsets.zero,
           value: includeFix,
           onChanged: (value) => setState(() => includeFix = value ?? false),
-          title: const Text('Include this location when I share'),
+          title: Text(widget.t('Include this location when I share')),
         ),
       ],
       ...widget.contacts
@@ -184,10 +186,10 @@ class _SafetyHubState extends State<SafetyHub> {
                 await DeviceTools.shareText(message);
                 return 'Share sheet opened.';
               }),
-        child: const Text('Share to another app'),
+        child: Text(widget.t('Share to another app')),
       ),
       const Divider(),
-      Text('Private app inbox', style: Theme.of(context).textTheme.titleMedium),
+      Text(widget.t('Private app inbox'), style: Theme.of(context).textTheme.titleMedium),
       const Text(
         'Share only your invite with trusted people. Check here for incoming alerts.',
       ),
@@ -200,7 +202,7 @@ class _SafetyHubState extends State<SafetyHub> {
                   await widget.onInbox(data);
                   return 'Inbox created.';
                 }),
-          child: const Text('Create private inbox'),
+          child: Text(widget.t('Create private inbox')),
         )
       else ...[
         Wrap(
@@ -208,7 +210,7 @@ class _SafetyHubState extends State<SafetyHub> {
           children: [
             OutlinedButton(
               onPressed: busy ? null : () => perform(refresh),
-              child: const Text('Refresh inbox'),
+              child: Text(widget.t('Refresh inbox')),
             ),
             OutlinedButton(
               onPressed: () => perform(() async {
@@ -217,7 +219,7 @@ class _SafetyHubState extends State<SafetyHub> {
                 );
                 return 'Invite copied.';
               }),
-              child: const Text('Copy my invite'),
+              child: Text(widget.t('Copy my invite')),
             ),
             OutlinedButton(
               onPressed: busy
@@ -226,18 +228,18 @@ class _SafetyHubState extends State<SafetyHub> {
                       final confirmed = await showDialog<bool>(
                         context: context,
                         builder: (dialog) => AlertDialog(
-                          title: const Text('Delete your inbox?'),
+                          title: Text(widget.t('Delete your inbox?')),
                           content: const Text(
                             'This removes its messages, invite and associated check-ins.',
                           ),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(dialog, false),
-                              child: const Text('Keep'),
+                              child: Text(widget.t('Keep')),
                             ),
                             TextButton(
                               onPressed: () => Navigator.pop(dialog, true),
-                              child: const Text('Delete'),
+                              child: Text(widget.t('Delete')),
                             ),
                           ],
                         ),
@@ -255,7 +257,7 @@ class _SafetyHubState extends State<SafetyHub> {
                         return 'Inbox deleted.';
                       });
                     },
-              child: const Text('Delete inbox'),
+              child: Text(widget.t('Delete inbox')),
             ),
           ],
         ),
@@ -279,7 +281,7 @@ class _SafetyHubState extends State<SafetyHub> {
                             );
                             return refresh();
                           }),
-                    child: const Text('Mark opened'),
+                    child: Text(widget.t('Mark opened')),
                   ),
           ),
         ),
@@ -309,7 +311,7 @@ class _SafetyHubState extends State<SafetyHub> {
                     ? 'Recipient marked this alert opened.'
                     : 'Alert stored in recipient inbox.';
               }),
-        child: const Text('Send in-app alert'),
+        child: Text(widget.t('Send in-app alert')),
       ),
       if (keyToken != null) ...[
         TextField(
@@ -340,7 +342,7 @@ class _SafetyHubState extends State<SafetyHub> {
                   await refresh();
                   return 'Check-in scheduled. A missed check-in goes to the recipient inbox while the server is running.';
                 }),
-          child: const Text('Schedule check-in'),
+          child: Text(widget.t('Schedule check-in')),
         ),
         ...checkins.map(
           (c) => Column(
