@@ -80,4 +80,33 @@ try {
  assert.equal(await desktop.locator('.desktop-console').isVisible(),false);
  await desktop.close();
  console.log('PASS: separate desktop and forced phone layouts, with safety tools linked from desktop');
+ const journalContext = await browser.newContext({viewport:{width:390,height:844},acceptDownloads:true});
+ const journalPage = await journalContext.newPage();
+ await journalPage.goto(origin+'/mobile');
+ await journalPage.locator('nav button').filter({hasText:'My Safety'}).click();
+ const journal = journalPage.getByRole('region',{name:'Incident journal'});
+ await journal.getByRole('button',{name:'New incident',exact:false}).click();
+ await journal.getByLabel('Incident title',{exact:true}).fill('Test incident');
+ await journal.getByLabel('Notes',{exact:true}).fill('Private test notes');
+ const photo = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jzTYAAAAASUVORK5CYII=','base64');
+ await journal.getByLabel('Choose incident attachments').setInputFiles({name:'fixture.png',mimeType:'image/png',buffer:photo});
+ await journal.getByRole('button',{name:'Save incident',exact:true}).click();
+ await journal.getByText('Incident saved on this device.').waitFor();
+ await journalPage.reload();
+ await journalPage.locator('nav button').filter({hasText:'My Safety'}).click();
+ await journal.locator('.journal-record-title').click();
+ assert.match(await journal.innerText(),/Private test notes/);
+ const exporting = journalPage.waitForEvent('download');
+ await journal.getByRole('button',{name:'Export incident ZIP'}).click();
+ const exported = await exporting;
+ assert.equal(exported.suggestedFilename(),'global-sos-incident.zip');
+ assert.ok(await exported.path());
+ assert.ok(await journalPage.locator('body').evaluate(el=>el.scrollWidth<=window.innerWidth),'journal must fit phone width');
+ journalPage.once('dialog',dialog=>dialog.accept());
+ await journal.getByRole('button',{name:'Delete incident',exact:true}).click();
+ await journal.getByText('Incident deleted.',{exact:true}).waitFor();
+ assert.equal(await journal.locator('.journal-record').count(),0);
+ await journalContext.close();
+ console.log('PASS: incident notes and photo persist across reload, export as ZIP and delete from browser storage');
+
 } finally {await browser?.close();server.kill();}
