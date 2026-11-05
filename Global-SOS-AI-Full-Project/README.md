@@ -39,6 +39,19 @@ The website has a [download page](https://global-sos.onrender.com/download). Its
 
 ## Run the website and API locally
 
+## Install Android
+
+1. Open the [v5 Actions workflow](https://github.com/SupremeGenZ-Github/Global-SOS/actions/workflows/v4.yml) and select a successful run for the commit you want.
+2. Download the `Global-SOS-v5-Android` artifact and extract it. Use the `Global-SOS-v5-TEST-SIGNED.apk` file on a supported ARM64 Android device. The AAB is a distribution bundle.
+3. Open the app, confirm your country, and check **Settings → Website & backend**. The app defaults to `https://global-sos.onrender.com`. Use **Synchronize directory** to request an update.
+4. Set up trusted contacts under **My Safety**. Android may ask for location or SMS permissions depending on the feature you choose.
+
+The [previous verified v5 artifact](https://github.com/SupremeGenZ-Github/Global-SOS/actions/runs/41851441430/artifacts/13337385159) predates the latest URL and localization fixes. Test signing is for development. An APK signed with a different key cannot update an existing installation in place. Uninstalling can erase local data.
+
+The website has a [download page](https://global-sos.onrender.com/download). Its APK depends on the release files staged in that deployment, so check the displayed version.
+
+## Run the website and API locally
+
 Run these commands in the application directory containing `package.json`. Node.js **24.21.0** matches CI.
 
 ```sh
@@ -84,6 +97,11 @@ flutter build appbundle --release --target-platform android-arm64 --dart-define=
 ```
 
 Look for the APK at `build/app/outputs/flutter-apk/app-release.apk` and the bundle at `build/app/outputs/bundle/release/app-release.aab`, relative to the Flutter project. CI verifies signatures and generates `SHA256SUMS.txt`. Use your own production signing credentials for distribution.
+
+## Languages and content review
+
+Core navigation and Home and Assistant introductions support **32 languages**. Telugu, Hindi, and Tamil have additional safety-tool and inbox translations. Telugu **Home** is **ప్రధాన పేజీ**. Some instructions and status text still appear in English. Official service names and messages written by users can appear in their original language.
+
 
 ## Languages and content review
 
