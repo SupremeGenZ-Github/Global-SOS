@@ -1,23 +1,23 @@
 {
-  "version": "0.5.0",
-  "size_bytes": 29343480,
-  "sha256": "3b2ee669cab801df69735bbaecbc0697095c50a8f9d230854c8a3eb9bcfe6eab",
-  "built_at": "2026-11-05T01:59:56.483Z",
+  "version": "0.5.1",
+  "size_bytes": 29409900,
+  "sha256": "e3746953c41e62a8065b61f35c142482ed3348cbb054bb7012e40a3ab9dc64ee",
+  "built_at": "2026-11-05T11:22:55.652Z",
   "parts": [
     {
       "name": "Global-SOS-AI.apk.part-001",
       "size_bytes": 10485760,
-      "sha256": "4c2309c4e29d45fcf4b0596c50c9d082a4991be31c2aafd1daf9b7a9bcf750a2"
+      "sha256": "148616b10bd2a2465eb493d4a1ca33ae2df8c93ab673626c51447c01b2a0d4ab"
     },
     {
       "name": "Global-SOS-AI.apk.part-002",
       "size_bytes": 10485760,
-      "sha256": "8bb6c60cb8d4957fb90bb8f1678635b86cc4017f374ec39263e924ba327df18e"
+      "sha256": "fa3f34452228c14047fd9657092c8e0bda35a67d8ca29ed54fe6a481a5025eb4"
     },
     {
       "name": "Global-SOS-AI.apk.part-003",
-      "size_bytes": 8371960,
-      "sha256": "6b78557ad7733ceb49f580dd3d8894ac88582cc0cf58fa63b741c7a15dd64aeb"
+      "size_bytes": 8438380,
+      "sha256": "59ca48cd4b1fb12dbb3aa90bfede81e4253514b359e818474b077dc433830fc5"
     }
   ]
 }
