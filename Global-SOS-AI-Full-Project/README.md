@@ -1,4 +1,4 @@
-# Global SOS v5
+# Global SOS v5.1
 
 Global SOS is a Flutter Android app, React website, and Node.js API for finding emergency and specialist help, preparing an SOS, and staying in touch with trusted contacts. The Android app includes an offline directory and can synchronize reviewed updates over HTTPS.
 
@@ -26,10 +26,21 @@ Open **My Safety** to prepare a trip plan with a destination, route, backup meet
 - **Trusted-contact export.** Download an individual contact as a `.vcf` file under **Edit trusted contacts**. The file contains the contact's name and phone number.
 - **SOS practice.** Run or cancel a five-second countdown on the web page. The drill has no call, message, location, or permission action.
 
+## Incident journal
+
+Open **My Safety → Incident journal** in Android, or **My Safety** on the website, to record photos, videos, and notes together. You can review attachments, edit notes, remove files, and export or delete an entry.
+
+- **Android capture.** Photo and video buttons open the device camera app. The existing-file button opens Android’s document picker. Recording requests a 60-second video limit, which the camera app controls.
+- **Local storage.** Android notes use encrypted app storage and media uses private app files. The website uses IndexedDB in the current browser. Browser storage is unencrypted and can be cleared or evicted. Uninstalling the app removes its private files.
+- **Sharing and export.** Review an entry before opening the system share sheet. Export ZIP includes notes and original media. Website drafts can also be exported before they are saved.
+- **Limits.** Up to 50 saved incidents, 10 attachments per incident, 100 MB per attachment, 200 MB per incident and 500 MB for the journal. Browser storage quotas can be lower. Playback depends on device support for the format.
+
+The journal records the time an entry was created or edited on the device. Its timestamps are user records and do not establish authenticity. Journal entries are kept locally until the user explicitly exports or shares them.
+
 ## Install Android
 
 1. Open the [v5 Actions workflow](https://github.com/SupremeGenZ-Github/Global-SOS/actions/workflows/v4.yml) and select a successful run for the commit you want.
-2. Download the `Global-SOS-v5-Android` artifact and extract it. Use the `Global-SOS-v5-TEST-SIGNED.apk` file on a supported ARM64 Android device. The AAB is a distribution bundle.
+2. Download the `Global-SOS-v51-Android` artifact and extract it. Use the `Global-SOS-v51-TEST-SIGNED.apk` file on a supported ARM64 Android device. The AAB is a distribution bundle.
 3. Open the app, confirm your country, and check **Settings → Website & backend**. The app defaults to `https://global-sos.onrender.com`. Use **Synchronize directory** to request an update.
 4. Set up trusted contacts under **My Safety**. Android may ask for location or SMS permissions depending on the feature you choose.
 
@@ -42,7 +53,7 @@ The website has a [download page](https://global-sos.onrender.com/download). Its
 ## Install Android
 
 1. Open the [v5 Actions workflow](https://github.com/SupremeGenZ-Github/Global-SOS/actions/workflows/v4.yml) and select a successful run for the commit you want.
-2. Download the `Global-SOS-v5-Android` artifact and extract it. Use the `Global-SOS-v5-TEST-SIGNED.apk` file on a supported ARM64 Android device. The AAB is a distribution bundle.
+2. Download the `Global-SOS-v51-Android` artifact and extract it. Use the `Global-SOS-v51-TEST-SIGNED.apk` file on a supported ARM64 Android device. The AAB is a distribution bundle.
 3. Open the app, confirm your country, and check **Settings → Website & backend**. The app defaults to `https://global-sos.onrender.com`. Use **Synchronize directory** to request an update.
 4. Set up trusted contacts under **My Safety**. Android may ask for location or SMS permissions depending on the feature you choose.
 
