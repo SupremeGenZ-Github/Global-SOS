@@ -1933,7 +1933,9 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
 
   void showTripPlanner() {
     final existing = safety['tripPlan'];
-    showDialog<void>(context: context, builder: (_) => _TripPlanDialog(
+    final dialogContext = navigatorKey.currentContext;
+    if (dialogContext == null) return;
+    showDialog<void>(context: dialogContext, builder: (_) => _TripPlanDialog(
       initial: existing is Map ? Map<String, dynamic>.from(existing) : {},
       persist: (plan) async {
         final previous = safety['tripPlan'];
