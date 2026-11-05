@@ -1,0 +1,13 @@
+export type IncidentAttachment = {id: string; name: string; type: string; size: number; blob: Blob};
+export type Incident = {id: string; title: string; notes: string; createdAt: string; updatedAt: string; attachments: IncidentAttachment[]};
+export const MAX_ATTACHMENT_BYTES: number;
+export const MAX_JOURNAL_BYTES: number;
+export const MAX_ATTACHMENTS: number;
+export const MAX_INCIDENTS: number;
+export const MEDIA_TYPES: Set<string>;
+export function validateAttachment(file: {type:string; size:number}): void;
+export function journalBytes(records: Incident[]): number;
+export function makeIncident(title:string, notes:string, files:(File|IncidentAttachment)[], previous?:Incident|null): Incident;
+export function listIncidents(): Promise<Incident[]>;
+export function saveIncident(record:Incident): Promise<void>;
+export function deleteIncident(id:string): Promise<void>;

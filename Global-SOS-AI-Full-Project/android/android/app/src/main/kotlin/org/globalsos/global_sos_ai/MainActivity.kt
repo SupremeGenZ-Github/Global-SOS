@@ -17,6 +17,7 @@ import io.flutter.plugin.common.MethodChannel
 import java.util.Locale
 
 class MainActivity : FlutterActivity() {
+    private val incidentMedia by lazy { IncidentMedia(this) }
     private var fileResult: MethodChannel.Result? = null
     private var fileText: String? = null
     private var contactResult: MethodChannel.Result? = null
@@ -28,6 +29,7 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(engine)
         tts = TextToSpeech(this) { status -> ttsReady = status == TextToSpeech.SUCCESS }
         MethodChannel(engine.dartExecutor.binaryMessenger, "org.globalsos/device").setMethodCallHandler { call, result ->
+            if (incidentMedia.handle(call, result)) return@setMethodCallHandler
             try {
                 when (call.method) {
                     "shareText" -> {
@@ -135,6 +137,7 @@ class MainActivity : FlutterActivity() {
     }
     @Deprecated("Legacy speech activity result")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (incidentMedia.onActivityResult(requestCode, resultCode, data)) return
         if (requestCode == 704) {
             val pending = fileResult
             val text = fileText
@@ -178,5 +181,5 @@ class MainActivity : FlutterActivity() {
             permissionResult = null
         }
     }
-    override fun onDestroy() { fileResult?.success(false); fileResult = null; fileText = null; contactResult?.success(null); contactResult = null; permissionResult?.success(false); permissionResult = null; tts?.shutdown(); speechResult?.success(null); speechResult = null; super.onDestroy() }
+    override fun onDestroy() { incidentMedia.close(); fileResult?.success(false); fileResult = null; fileText = null; contactResult?.success(null); contactResult = null; permissionResult?.success(false); permissionResult = null; tts?.shutdown(); speechResult?.success(null); speechResult = null; super.onDestroy() }
 }

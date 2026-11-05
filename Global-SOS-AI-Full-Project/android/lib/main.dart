@@ -12,6 +12,7 @@ import 'safety_checklist.dart';
 import 'intent_model.dart';
 import 'sos_practice.dart';
 import 'safety_hub.dart';
+import 'incident_journal.dart';
 
 const officialServer = 'https://global-sos.onrender.com';
 const configuredServer = String.fromEnvironment(
@@ -1964,6 +1965,14 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       'My Safety',
       'Contacts are stored in encrypted device storage. No account required.',
     ),
+    FilledButton.icon(
+      onPressed: () => navigatorKey.currentState?.push(
+        MaterialPageRoute<void>(builder: (_) => const IncidentJournal()),
+      ),
+      icon: const Icon(Icons.perm_media_outlined),
+      label: const Text('Incident journal · photos, videos and notes'),
+    ),
+    const SizedBox(height: 12),
     FilledButton.icon(
       onPressed: addContact,
       icon: const Icon(Icons.person_add_outlined),

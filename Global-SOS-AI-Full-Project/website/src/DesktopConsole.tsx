@@ -26,7 +26,7 @@ export function DesktopConsole({country, services, online, contacts, onSOS, onNa
         {!services.length && <p>{t("Choose a country in the header to review its directory.")}</p>}
         <button onClick={() => onNavigate('All Helplines')}>{t('All Helplines')}</button>
       </article>
-      <article className="service-card console-actions">
+      <article className="service-card console-actions"><button onClick={() => onNavigate('My Safety')}>Document an incident</button>
         <h2>{t("Safety workspace")}</h2>
         <button onClick={() => onNavigate('My Safety')}>{t('My Safety')}</button>
         <button onClick={() => onNavigate('AI Assistant')}>{t('AI Assistant')}</button>
