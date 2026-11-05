@@ -1829,6 +1829,10 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
             ],
           ),
           if (controls) ...[
+            TextButton(
+              onPressed: () => exportTrustedContact(c),
+              child: const Text('Export contact file'),
+            ),
             SwitchListTile(
               title: const Text('This person agreed to receive SOS alerts'),
               value: c['alertConsent'] == true,
@@ -1909,6 +1913,51 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     );
   }
 
+
+  Future<void> exportTrustedContact(Json contact) async {
+    final phone = contact['phone'].toString().replaceAll(RegExp(r'[^+0-9]'), '');
+    if (!RegExp(r'^\+?\d{3,20}$').hasMatch(phone)) {
+      note('This contact does not have a valid phone number.');
+      return;
+    }
+    final name = _vcardText(contact['name'].toString());
+    try {
+      final saved = await _saveTextFile('global-sos-contact.vcf', 'text/vcard',
+        _fileLines(['BEGIN:VCARD', 'VERSION:3.0', 'FN:$name', 'N:$name;;;;',
+          'TEL;TYPE=VOICE:$phone', 'END:VCARD']));
+      if (saved) note('Contact file saved.');
+    } catch (_) {
+      note('Could not save the contact file.');
+    }
+  }
+
+  void showTripPlanner() {
+    final existing = safety['tripPlan'];
+    final dialogContext = navigatorKey.currentContext;
+    if (dialogContext == null) return;
+    showDialog<void>(context: dialogContext, builder: (_) => _TripPlanDialog(
+      initial: existing is Map ? Map<String, dynamic>.from(existing) : {},
+      persist: (plan) async {
+        final previous = safety['tripPlan'];
+        if (plan == null) {
+          safety.remove('tripPlan');
+        } else {
+          safety['tripPlan'] = plan;
+        }
+        try {
+          await vault.save(safety);
+        } catch (_) {
+          if (previous == null) {
+            safety.remove('tripPlan');
+          } else {
+            safety['tripPlan'] = previous;
+          }
+          rethrow;
+        }
+      },
+    ));
+  }
+
   List<Widget> safetyPage() => [
     heading(
       'My Safety',
@@ -1939,6 +1988,11 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         setState(() => safety['inbox'] = value);
         await saveSafety();
       },
+    ),
+    OutlinedButton.icon(
+      onPressed: showTripPlanner,
+      icon: const Icon(Icons.route_outlined),
+      label: const Text('Trip plan and personal reminder'),
     ),
     OutlinedButton.icon(
       onPressed: showEmergencyCard,
@@ -2455,4 +2509,205 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     serverInput.dispose();
     super.dispose();
   }
+}
+
+const _fileBridge = MethodChannel('org.globalsos/device');
+
+Future<bool> _saveTextFile(String name, String mime, String text) async =>
+    await _fileBridge.invokeMethod<bool>('saveTextFile', {
+      'name': name, 'mime': mime, 'text': text,
+    }) ?? false;
+
+String _calendarDate(DateTime value) => value.toUtc().toIso8601String()
+    .replaceAll(RegExp(r'[-:]'), '')
+    .replaceFirst(RegExp(r'\.\d+Z$'), 'Z');
+
+String _vcardText(String value) => value
+    .replaceAll(r'\', r'\\')
+    .replaceAll(RegExp(r'\r\n|\r|\n'), r'\n')
+    .replaceAll(',', r'\,')
+    .replaceAll(';', r'\;');
+
+String _fileLines(List<String> lines) {
+  final output = StringBuffer();
+  for (final line in lines) {
+    var size = 0;
+    for (final rune in line.runes) {
+      final character = String.fromCharCode(rune);
+      final bytes = utf8.encode(character).length;
+      if (size + bytes > 75) {
+        output.write('\r\n ');
+        size = 1;
+      }
+      output.write(character);
+      size += bytes;
+    }
+    output.write('\r\n');
+  }
+  return output.toString();
+}
+
+class _TripPlanDialog extends StatefulWidget {
+  const _TripPlanDialog({required this.initial, required this.persist});
+  final Json initial;
+  final Future<void> Function(Json?) persist;
+
+  @override
+  State<_TripPlanDialog> createState() => _TripPlanDialogState();
+}
+
+class _TripPlanDialogState extends State<_TripPlanDialog> {
+  static const labels = {
+    'destination': 'Destination',
+    'route': 'Route or transport',
+    'meetingPoint': 'Backup meeting point',
+  };
+  late final fields = {
+    for (final key in labels.keys)
+      key: TextEditingController(text: widget.initial[key] as String? ?? ''),
+  };
+  late DateTime? checkIn =
+      DateTime.tryParse(widget.initial['checkIn'] as String? ?? '')?.toLocal();
+  String status = '';
+  bool busy = false;
+
+  @override
+  void dispose() {
+    for (final controller in fields.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  String get checkInLabel => checkIn == null
+      ? 'Choose planned check-in time'
+      : '${MaterialLocalizations.of(context).formatCompactDate(checkIn!)} '
+        '${MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay.fromDateTime(checkIn!))} '
+        '(${checkIn!.timeZoneName})';
+
+  Json get plan => {
+    for (final entry in fields.entries) entry.key: entry.value.text.trim(),
+    'checkIn': checkIn?.toUtc().toIso8601String(),
+  };
+
+  bool get hasPlan =>
+      checkIn != null || fields.values.any((field) => field.text.trim().isNotEmpty);
+
+  String get summary => [
+    'Global SOS trip plan',
+    for (final entry in labels.entries)
+      if (fields[entry.key]!.text.trim().isNotEmpty)
+        '${entry.value}: ${fields[entry.key]!.text.trim()}',
+    if (checkIn != null) 'Planned check-in: $checkInLabel',
+    'I plan to check in myself. This plan sends no automatic alerts.',
+  ].join('\n');
+
+  Future<void> run(Future<String> Function() operation) async {
+    setState(() => busy = true);
+    try {
+      final result = await operation();
+      if (mounted) setState(() => status = result);
+    } catch (_) {
+      if (mounted) setState(() => status = 'The action could not be completed.');
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> chooseTime() async {
+    final now = DateTime.now();
+    final last = DateTime(now.year + 2, now.month, now.day);
+    final saved = checkIn;
+    final day = await showDatePicker(
+      context: context,
+      firstDate: DateUtils.dateOnly(now),
+      lastDate: last,
+      initialDate: saved != null && !saved.isBefore(DateUtils.dateOnly(now)) &&
+          !saved.isAfter(last) ? saved : now,
+    );
+    if (day == null || !mounted) return;
+    final time = await showTimePicker(
+      context: context, initialTime: TimeOfDay.fromDateTime(saved ?? now),
+    );
+    if (time == null || !mounted) return;
+    setState(() => checkIn =
+        DateTime(day.year, day.month, day.day, time.hour, time.minute));
+  }
+
+  Future<String> saveReminder() async {
+    final date = checkIn;
+    if (date == null || !date.isAfter(DateTime.now())) {
+      return 'Choose a future time for the calendar reminder.';
+    }
+    final stamp = DateTime.now();
+    final body = _fileLines([
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Global SOS//Trip Planner//EN',
+      'BEGIN:VEVENT', 'UID:${stamp.microsecondsSinceEpoch}@global-sos',
+      'DTSTAMP:${_calendarDate(stamp)}', 'DTSTART:${_calendarDate(date)}',
+      'SUMMARY:Personal check-in', 'DESCRIPTION:Contact your trusted person yourself.',
+      'BEGIN:VALARM', 'ACTION:DISPLAY', 'TRIGGER:PT0M',
+      'DESCRIPTION:Time for your check-in', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR',
+    ]);
+    return await _saveTextFile('global-sos-check-in.ics', 'text/calendar', body)
+        ? 'Calendar file saved. Import it into your calendar and check the reminder.'
+        : 'Calendar export cancelled.';
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Trip plan and personal reminder'),
+    content: SingleChildScrollView(child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text('Saving is optional. A saved plan stays in this app’s private storage. Calendar reminders send no alerts to contacts.'),
+        for (final entry in labels.entries)
+          TextField(
+            controller: fields[entry.key],
+            maxLength: entry.key == 'route' ? 300 : 150,
+            decoration: InputDecoration(labelText: entry.value),
+            onChanged: (_) => setState(() {}),
+          ),
+        OutlinedButton(onPressed: busy ? null : chooseTime, child: Text(checkInLabel)),
+        if (checkIn != null)
+          TextButton(onPressed: busy ? null : () => setState(() => checkIn = null),
+              child: const Text('Remove check-in time')),
+        if (hasPlan)
+          ExpansionTile(title: const Text('Preview plan'), children: [SelectableText(summary)]),
+        Wrap(spacing: 6, children: [
+          TextButton(onPressed: !hasPlan || busy ? null : () => run(() async {
+            await widget.persist(plan);
+            return 'Trip plan saved on this device.';
+          }), child: const Text('Save plan')),
+          TextButton(onPressed: !hasPlan || busy ? null : () => run(() async {
+            await DeviceTools.shareText(summary);
+            return 'Plan handed to the share sheet.';
+          }), child: const Text('Share plan')),
+          TextButton(onPressed: !hasPlan || busy ? null : () => run(() async {
+            await Clipboard.setData(ClipboardData(text: summary));
+            return 'Plan copied.';
+          }), child: const Text('Copy plan')),
+          TextButton(onPressed: !hasPlan || busy ? null : () => run(() async =>
+            await _saveTextFile('global-sos-trip-plan.txt', 'text/plain', summary)
+              ? 'Trip plan exported.' : 'Export cancelled.'),
+            child: const Text('Export text')),
+          TextButton(onPressed: checkIn == null || busy ? null : () => run(saveReminder),
+            child: const Text('Export calendar reminder')),
+          TextButton(onPressed: busy ? null : () => run(() async {
+            await widget.persist(null);
+            if (mounted) {
+              for (final field in fields.values) {
+                field.clear();
+              }
+              setState(() => checkIn = null);
+            }
+            return 'Saved trip plan cleared.';
+          }), child: const Text('Clear plan')),
+        ]),
+        if (status.isNotEmpty) Semantics(liveRegion: true, child: Text(status)),
+      ],
+    )),
+    actions: [TextButton(onPressed: busy ? null : () => Navigator.pop(context),
+      child: const Text('Close'))],
+  );
 }

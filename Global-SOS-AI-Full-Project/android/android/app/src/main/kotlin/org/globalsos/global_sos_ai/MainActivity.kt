@@ -17,6 +17,8 @@ import io.flutter.plugin.common.MethodChannel
 import java.util.Locale
 
 class MainActivity : FlutterActivity() {
+    private var fileResult: MethodChannel.Result? = null
+    private var fileText: String? = null
     private var contactResult: MethodChannel.Result? = null
     private var permissionResult: MethodChannel.Result? = null
     private var speechResult: MethodChannel.Result? = null
@@ -35,6 +37,31 @@ class MainActivity : FlutterActivity() {
                         }
                         startActivity(Intent.createChooser(share, "Share with"))
                         result.success(null)
+                    }
+                    "saveTextFile" -> {
+                        val name = call.argument<String>("name") ?: ""
+                        val mime = call.argument<String>("mime") ?: ""
+                        val text = call.argument<String>("text") ?: ""
+                        require(name in setOf("global-sos-trip-plan.txt", "global-sos-check-in.ics", "global-sos-contact.vcf"))
+                        require(mime in setOf("text/plain", "text/calendar", "text/vcard"))
+                        require(text.isNotEmpty() && text.length <= 16000)
+                        if (fileResult != null) {
+                            result.error("BUSY", "File picker already open", null)
+                        } else {
+                            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT)
+                                .addCategory(Intent.CATEGORY_OPENABLE)
+                                .setType(mime)
+                                .putExtra(Intent.EXTRA_TITLE, name)
+                            fileResult = result
+                            fileText = text
+                            try {
+                                startActivityForResult(intent, 704)
+                            } catch (e: Exception) {
+                                fileResult = null
+                                fileText = null
+                                throw e
+                            }
+                        }
                     }
                     "pickContact" -> {
                         if (contactResult != null) result.error("BUSY", "Contact picker already open", null)
@@ -108,7 +135,27 @@ class MainActivity : FlutterActivity() {
     }
     @Deprecated("Legacy speech activity result")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        if (requestCode == 702) {
+        if (requestCode == 704) {
+            val pending = fileResult
+            val text = fileText
+            fileResult = null
+            fileText = null
+            val uri = if (resultCode == Activity.RESULT_OK) data?.data else null
+            if (uri == null || pending == null || text == null) {
+                pending?.success(false)
+                return
+            }
+            Thread {
+                try {
+                    val stream = contentResolver.openOutputStream(uri)
+                        ?: throw IllegalStateException("Document could not be opened")
+                    stream.bufferedWriter(Charsets.UTF_8).use { it.write(text) }
+                    runOnUiThread { pending.success(true) }
+                } catch (e: Exception) {
+                    runOnUiThread { pending.error("FILE", "Unable to save selected document", null) }
+                }
+            }.start()
+        } else if (requestCode == 702) {
             try {
                 val uri = if (resultCode == Activity.RESULT_OK) data?.data else null
                 val contact = uri?.let {
@@ -131,5 +178,5 @@ class MainActivity : FlutterActivity() {
             permissionResult = null
         }
     }
-    override fun onDestroy() { contactResult?.success(null); contactResult = null; permissionResult?.success(false); permissionResult = null; tts?.shutdown(); speechResult?.success(null); speechResult = null; super.onDestroy() }
+    override fun onDestroy() { fileResult?.success(false); fileResult = null; fileText = null; contactResult?.success(null); contactResult = null; permissionResult?.success(false); permissionResult = null; tts?.shutdown(); speechResult?.success(null); speechResult = null; super.onDestroy() }
 }
