@@ -1387,6 +1387,13 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     Text('${records.map((record) => record['country']).toSet().length} countries with source-checked records',
       style: const TextStyle(fontSize: 12, height: 1.5)),
   ];
+  void cancelCountdown() {
+    countdownTimer?.cancel();
+    ++locationGeneration;
+    pendingLocation = null;
+    setState(() { countdown = null; position = null; });
+  }
+
   List<Widget> sos() => [
     heading(
       'Emergency controls',
@@ -1432,18 +1439,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
                 style: const TextStyle(fontSize: 32),
               ),
               const SizedBox(height: 15),
-              FilledButton(
-                onPressed: () {
-                  countdownTimer?.cancel();
-                  ++locationGeneration;
-                  pendingLocation = null;
-                  setState(() {
-                    countdown = null;
-                    position = null;
-                  });
-                },
-                child: const Text('Cancel countdown'),
-              ),
+              const Text('Use the pinned Cancel button below to stop.'),
             ],
           ),
         ),
@@ -2406,6 +2402,12 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
                   ),
                 )))),
               ]),
+          persistentFooterButtons: countdown == null ? null : [
+            SizedBox(width: double.infinity, child: FilledButton.icon(
+              onPressed: cancelCountdown,
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xffd83750), foregroundColor: Colors.white),
+              icon: const Icon(Icons.close_rounded), label: const Text('Cancel countdown'))),
+          ],
           bottomNavigationBar: page == 5 ? null : NavigationBar(
             selectedIndex: page,
             labelBehavior: MediaQuery.textScalerOf(ctx).scale(14) > 20

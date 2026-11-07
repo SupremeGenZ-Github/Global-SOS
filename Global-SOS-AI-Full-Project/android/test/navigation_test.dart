@@ -278,6 +278,26 @@ void main() {
     expect(dialed, isEmpty);
     await tester.pumpWidget(const SizedBox());
   });
+  testWidgets('SOS cancellation stays visible on a narrow screen and other tabs', (tester) async {
+    final dialed = <String>[];
+    await start(tester, viewport: const Size(320,780), dialer: (number) async { dialed.add(number); });
+    tester.platformDispatcher.textScaleFactorTestValue = 1.8;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await tester.pump();
+    final startSOS = find.widgetWithText(ElevatedButton, 'SOS');
+    await tester.scrollUntilVisible(startSOS, 200, scrollable: find.byType(Scrollable).first);
+    await tester.tap(startSOS);
+    await tester.pump();
+    await tester.tap(find.byType(NavigationDestination).at(3));
+    await tester.pump();
+    final cancel = find.text('Cancel countdown');
+    expect(cancel.hitTestable(), findsOneWidget);
+    await tester.tap(cancel);
+    await tester.pump(const Duration(seconds: 6));
+    expect(dialed, isEmpty);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
   testWidgets('Leaving app cancels a pending SOS countdown', (tester) async {
     final dialed = <String>[];
     await start(
