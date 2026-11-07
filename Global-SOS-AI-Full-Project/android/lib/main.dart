@@ -1334,10 +1334,13 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     heading('Home', 'Help is closer than you think.', 'Find the right service. Make the next step clear.'),
     Card(child: Padding(padding: const EdgeInsets.fromLTRB(20, 20, 20, 22), child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          const Icon(Icons.emergency_outlined, color: Color(0xffed5a6f)),
-          const SizedBox(width: 8),
-          Expanded(child: Text(t('Emergency'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700))),
+        Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 12, runSpacing: 8, children: [
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.emergency_outlined, color: Color(0xffed5a6f)),
+            const SizedBox(width: 8),
+            Text(t('Emergency'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+          ]),
           if (emergencyNumber != null) Text(emergencyNumber!, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
         ]),
         sosButton(),
@@ -1986,11 +1989,13 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       icon: const Icon(Icons.person_add_outlined),
       label: const Text('Add trusted contact'),
     ),
+    const SizedBox(height: 10),
     OutlinedButton.icon(
       onPressed: importContact,
       icon: const Icon(Icons.contacts_outlined),
       label: const Text('Choose from phone contacts'),
     ),
+    const SizedBox(height: 12),
     ...(safety['contacts'] as List).cast<Json>().map(
       (c) => trustedContact(c, controls: true),
     ),
