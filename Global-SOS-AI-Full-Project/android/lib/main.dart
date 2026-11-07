@@ -192,10 +192,10 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
             ? 'Public directory ready. Cloud features are not configured.'
             : 'Server online. PostgreSQL unavailable; saved directory preserved. Check DATABASE_URL in Render.';
         lastSync = DateTime.now();
-        if (mounted) setState(() {
+        if (mounted) { setState(() {
           syncSummary = data['database_status'] == 'not_configured' ? 'Public directory' : 'Saved directory · cloud limited';
           syncDetail = detail;
-        });
+        }); }
         note(detail);
         return;
       }
@@ -204,9 +204,9 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       await store.replace(data);
       lastSync = DateTime.now();
       final detail = 'Directory synchronized · version ${data['version']}';
-      if (mounted) setState(() {
+      if (mounted) { setState(() {
         directory = data; syncSummary = 'Directory updated'; syncDetail = detail;
-      });
+      }); }
       note(detail);
     } catch (error) {
       final detail = 'Directory request failed. Saved contacts remain available. $error';
