@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:global_sos_ai/main.dart';
@@ -110,6 +111,23 @@ Future<void> savePreview(WidgetTester tester, String name) async {
 }
 
 void main() {
+  setUpAll(() async {
+    final root = Platform.environment['FLUTTER_ROOT'];
+    if (root == null) return;
+    final fonts = Directory('$root/bin/cache/artifacts/material_fonts');
+    final roboto = FontLoader('Roboto');
+    for (final file in fonts.listSync().whereType<File>()) {
+      final name = file.uri.pathSegments.last;
+      if (name.startsWith('Roboto-') && name.endsWith('.ttf')) {
+        roboto.addFont(Future.value(ByteData.sublistView(await file.readAsBytes())));
+      }
+    }
+    await roboto.load();
+    final icons = FontLoader('MaterialIcons');
+    icons.addFont(Future.value(ByteData.sublistView(
+      await File('${fonts.path}/MaterialIcons-Regular.otf').readAsBytes())));
+    await icons.load();
+  });
   testWidgets('offline emergency card opens inside the app navigator', (tester) async {
     await start(tester);
     await tester.tap(find.byType(NavigationDestination).at(4));
@@ -199,6 +217,8 @@ void main() {
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     tester.view.physicalSize = const Size(320,780);
     await tester.pumpAndSettle();
+    expect(tester.widget<NavigationBar>(find.byType(NavigationBar)).labelBehavior,
+      NavigationDestinationLabelBehavior.alwaysHide);
     expect(tester.takeException(), isNull);
     await savePreview(tester, 'home-large-text');
     await tester.pumpWidget(const SizedBox());

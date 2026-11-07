@@ -1021,6 +1021,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       context: navigatorKey.currentContext ?? context,
       builder: (ctx) => AlertDialog(
         title: const Text('Trusted contact'),
+        scrollable: true,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -2407,7 +2408,9 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
               ]),
           bottomNavigationBar: page == 5 ? null : NavigationBar(
             selectedIndex: page,
-            labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+            labelBehavior: MediaQuery.textScalerOf(ctx).scale(14) > 20
+                ? NavigationDestinationLabelBehavior.alwaysHide
+                : NavigationDestinationLabelBehavior.onlyShowSelected,
             onDestinationSelected: (value) {
               FocusManager.instance.primaryFocus?.unfocus();
               setState(() => page = value);
