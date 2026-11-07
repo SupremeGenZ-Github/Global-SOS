@@ -283,9 +283,9 @@ void main() {
     await start(tester, viewport: const Size(320,780), dialer: (number) async { dialed.add(number); });
     tester.platformDispatcher.textScaleFactorTestValue = 1.8;
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-    await tester.pump();
+    await tester.pumpAndSettle();
     final startSOS = find.widgetWithText(ElevatedButton, 'SOS');
-    await tester.scrollUntilVisible(startSOS, 200, scrollable: find.byType(Scrollable).first);
+    await tester.scrollUntilVisible(startSOS.hitTestable(), 200, scrollable: find.byType(Scrollable).first);
     await tester.tap(startSOS);
     await tester.pump();
     await tester.tap(find.byType(NavigationDestination).at(3));
@@ -327,7 +327,7 @@ void main() {
     await start(tester);
     await tester.tap(find.byType(NavigationDestination).at(4));
     await tester.pumpAndSettle();
-    final openPlanner = find.text('Trip plan and personal reminder');
+    final openPlanner = find.text('Trip plan');
     await tester.scrollUntilVisible(openPlanner, 200, scrollable: find.byType(Scrollable).first);
     await tester.tap(openPlanner);
     await tester.pumpAndSettle();

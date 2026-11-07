@@ -1318,14 +1318,14 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
           shape: const CircleBorder(side: BorderSide(color: Color(0xfff88999), width: 4)),
           fixedSize: const Size(172, 172), padding: const EdgeInsets.all(22),
         ),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
+        child: FittedBox(fit: BoxFit.scaleDown, child: Column(mainAxisSize: MainAxisSize.min, children: [
           const Icon(Icons.emergency_outlined, size: 34),
           const SizedBox(height: 5),
-          FittedBox(fit: BoxFit.scaleDown, child: Text(t('SOS'), style: const TextStyle(
-            fontSize: 30, fontWeight: FontWeight.w800, letterSpacing: 2))),
+          Text(t('SOS'), style: const TextStyle(
+            fontSize: 30, fontWeight: FontWeight.w800, letterSpacing: 2)),
           const SizedBox(height: 3),
-          FittedBox(fit: BoxFit.scaleDown, child: Text(t('Start SOS'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500))),
-        ]),
+          Text(t('Start SOS'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+        ])),
       )),
     ),
   ));
@@ -1976,7 +1976,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     ),
     SafetyFeatureGrid(children: [
       SafetyFeature(icon: Icons.perm_media_outlined, title: 'Incident journal', caption: 'Photos, videos and notes', onTap: openJournal),
-      SafetyFeature(icon: Icons.route_outlined, title: 'Trip plan and personal reminder', caption: 'Prepare and share a plan', onTap: showTripPlanner),
+      SafetyFeature(icon: Icons.route_outlined, title: 'Trip plan', caption: 'Route, reminders and sharing', onTap: showTripPlanner),
       SafetyFeature(icon: Icons.badge_outlined, title: 'Offline emergency card', caption: 'View your saved details', onTap: showEmergencyCard),
     ]),
     const SizedBox(height: 24),

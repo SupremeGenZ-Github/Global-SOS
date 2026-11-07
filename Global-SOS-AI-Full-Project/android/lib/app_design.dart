@@ -87,8 +87,16 @@ class SafetyFeatureGrid extends StatelessWidget {
   Widget build(BuildContext context) => LayoutBuilder(builder: (context, constraints) {
     final wideText = MediaQuery.textScalerOf(context).scale(14) > 20;
     final columns = constraints.maxWidth >= 660 ? 4 : constraints.maxWidth >= 300 && !wideText ? 2 : 1;
-    final width = (constraints.maxWidth - (columns - 1) * 12) / columns;
-    return Wrap(spacing: 12, runSpacing: 12, children: children.map((child) => SizedBox(width: width, child: child)).toList());
+    return Column(children: [
+      for (var start = 0; start < children.length; start += columns)
+        Padding(padding: EdgeInsets.only(bottom: start + columns < children.length ? 12 : 0),
+          child: IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            for (var index = start; index < start + columns && index < children.length; index++) ...[
+              if (index > start) const SizedBox(width: 12),
+              Expanded(child: children[index]),
+            ],
+          ]))),
+    ]);
   });
 }
 
