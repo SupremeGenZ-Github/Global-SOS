@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+import 'package:flutter/rendering.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -54,8 +57,11 @@ final fixture = <String, dynamic>{
 Future<void> start(
   WidgetTester tester, {
   Future<void> Function(String)? dialer,
+  Future<Json> Function()? privateLoader,
+  Json? savedDirectory,
+  Size viewport = const Size(900,1400),
 }) async {
-  tester.view.physicalSize = const Size(900, 1400);
+  tester.view.physicalSize = viewport;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -63,8 +69,8 @@ Future<void> start(
   await tester.pumpWidget(
     GlobalSOS(
       emergencyDialer: dialer,
-      directoryLoader: () async => fixture,
-      safetyLoader: () async => <String, dynamic>{
+      directoryLoader: () async => savedDirectory ?? fixture,
+      safetyLoader: privateLoader ?? () async => <String, dynamic>{
         'contacts': <dynamic>[],
         'history': <dynamic>[],
       },
@@ -75,7 +81,7 @@ Future<void> start(
   );
   for (
     var i = 0;
-    i < 40 && find.textContaining('Offline directory ready').evaluate().isEmpty;
+    i < 40 && find.byKey(const ValueKey('directory-status')).evaluate().isEmpty;
     i++
   ) {
     await tester.runAsync(
@@ -84,10 +90,120 @@ Future<void> start(
     await tester.pump();
   }
   await tester.pumpAndSettle();
-  expect(find.textContaining('Offline directory ready'), findsOneWidget);
+  expect(find.byKey(const ValueKey('directory-status')), findsOneWidget);
+}
+
+
+Future<void> savePreview(WidgetTester tester, String name) async {
+  await tester.pumpAndSettle();
+  final boundary = tester.renderObject<RenderRepaintBoundary>(find.byKey(const ValueKey('app-preview')));
+  await tester.runAsync(() async {
+    final image = await boundary.toImage(pixelRatio: 1);
+    try {
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (bytes == null) throw StateError('Preview image unavailable');
+      final file = File('build/previews/v52-$name.png');
+      await file.parent.create(recursive: true);
+      await file.writeAsBytes(bytes.buffer.asUint8List(), flush: true);
+    } finally { image.dispose(); }
+  });
 }
 
 void main() {
+  testWidgets('offline emergency card opens inside the app navigator', (tester) async {
+    await start(tester);
+    await tester.tap(find.byType(NavigationDestination).at(4));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Offline emergency card'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.textContaining('Global SOS emergency card'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('an unavailable private vault offers retry instead of replacing contacts', (tester) async {
+    var attempts = 0;
+    await start(tester, privateLoader: () async {
+      if (++attempts == 1) throw StateError('Storage unavailable');
+      return {'contacts': <dynamic>[{'id':'one','name':'Saved contact','phone':'+19995550123'}], 'history': <dynamic>[]};
+    });
+    await tester.tap(find.byType(NavigationDestination).at(4));
+    await tester.pumpAndSettle();
+    expect(find.text('Retry private data'), findsOneWidget);
+    expect(find.text('Add trusted contact'), findsNothing);
+    await tester.tap(find.text('Retry private data'));
+    await tester.pumpAndSettle();
+    expect(find.text('Saved contact'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('country picker is searchable and clears stale directory filters', (tester) async {
+    await start(tester);
+    await tester.tap(find.byType(NavigationDestination).at(3));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'does-not-match');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(NavigationDestination).at(0));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'IN'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'Search country'), 'united');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('United States'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(NavigationDestination).at(3));
+    await tester.pumpAndSettle();
+    expect(find.text('Other-country fixture'), findsOneWidget);
+    expect(find.text('Fixture emergency service'), findsNothing);
+    expect(tester.widget<TextField>(find.byType(TextField).first).controller!.text, isEmpty);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('older records without check dates render and Settings has a back action', (tester) async {
+    final oldDirectory = Map<String, dynamic>.from(fixture);
+    oldDirectory['records'] = (fixture['records'] as List).map((item) => {...Map<String, dynamic>.from(item as Map), 'checked_at':null}).toList();
+    await start(tester, savedDirectory: oldDirectory);
+    await tester.tap(find.byType(NavigationDestination).at(3));
+    await tester.pumpAndSettle();
+    expect(find.text('Fixture emergency service'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.byTooltip('Settings & country'));
+    await tester.pumpAndSettle();
+    expect(find.byType(NavigationBar), findsNothing);
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('phone layout supports large text and produces release previews', (tester) async {
+    await start(tester, viewport: const Size(390,844));
+    await savePreview(tester, 'home-dark');
+    await tester.tap(find.byType(NavigationDestination).at(4));
+    await tester.pumpAndSettle();
+    await savePreview(tester, 'my-safety');
+    await tester.tap(find.byTooltip('Settings & country'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Light theme'), 200,
+      scrollable: find.byType(Scrollable).first);
+    await tester.tap(find.widgetWithText(SwitchListTile, 'Light theme'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    await savePreview(tester, 'home-light');
+    tester.platformDispatcher.textScaleFactorTestValue = 1.8;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    tester.view.physicalSize = const Size(320,780);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await savePreview(tester, 'home-large-text');
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('SOS preparation opens below the app navigator and can be cancelled', (tester) async {
     await start(tester);
     await tester.tap(find.widgetWithText(ElevatedButton, 'SOS'));
@@ -171,7 +287,7 @@ void main() {
     await start(tester);
     await tester.tap(find.byType(NavigationDestination).at(4));
     await tester.pumpAndSettle();
-    final openPlanner = find.widgetWithText(OutlinedButton, 'Trip plan and personal reminder');
+    final openPlanner = find.text('Trip plan and personal reminder');
     await tester.scrollUntilVisible(openPlanner, 200, scrollable: find.byType(Scrollable).first);
     await tester.tap(openPlanner);
     await tester.pumpAndSettle();
@@ -211,3 +327,4 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 }
+

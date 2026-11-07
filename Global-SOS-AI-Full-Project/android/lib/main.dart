@@ -13,6 +13,7 @@ import 'intent_model.dart';
 import 'sos_practice.dart';
 import 'safety_hub.dart';
 import 'incident_journal.dart';
+import 'app_design.dart';
 
 const officialServer = 'https://global-sos.onrender.com';
 const configuredServer = String.fromEnvironment(
@@ -60,6 +61,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
   final model = OfflineModel();
   final chatInput = TextEditingController();
   final queryInput = TextEditingController();
+  final regionInput = TextEditingController();
   final serverInput = TextEditingController(text: resolveServer(null));
   SharedPreferences? prefs;
   Json? directory;
@@ -95,6 +97,9 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
   String languageCode = 'en';
   String t(String text) => AppLanguages.translate(languageCode, text);
   bool syncing = false, preparingSOS = false, deviceSmsGranted = false;
+  bool safetyAvailable = true;
+  String syncSummary = 'Saved directory';
+  String syncDetail = 'The bundled directory is available on this device.';
   int sosGeneration = 0, locationGeneration = 0;
   DateTime? lastSync;
   Future<void>? pendingLocation;
@@ -110,9 +115,11 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     try {
       final d = await (widget.directoryLoader?.call() ?? store.load());
       Json s;
+      var privateDataLoaded = true;
       try {
         s = await (widget.safetyLoader?.call() ?? vault.load());
       } catch (_) {
+        privateDataLoaded = false;
         s = {'contacts': <dynamic>[], 'history': <dynamic>[]};
       }
       s['contacts'] = s['contacts'] is List ? s['contacts'] : <dynamic>[];
@@ -129,10 +136,13 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       setState(() {
         directory = d;
         safety = s;
+        safetyAvailable = privateDataLoaded;
         prefs = p;
         categories = c;
-        country = p.getString('country') ?? '';
-        languageCode = p.getString('language') ?? 'en';
+        final savedCountry = p.getString('country') ?? '';
+        country = (d['countries'] as List).any((item) => item['code'] == savedCountry) ? savedCountry : '';
+        final savedLanguage = p.getString('language') ?? 'en';
+        languageCode = AppLanguages.languages.any((item) => item['code'] == savedLanguage) ? savedLanguage : 'en';
         favorites = p.getStringList('favorites') ?? [];
         light = p.getBool('light') ?? false;
         contrast = p.getBool('contrast') ?? false;
@@ -145,6 +155,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
           unawaited(p.setString('server', serverInput.text));
         }
         status = 'Offline directory ready · version ${d['version']}';
+        syncDetail = status;
       });
       if (widget.directoryLoader == null) unawaited(sync());
     } catch (_) {
@@ -167,41 +178,42 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
 
   List<Json> get records => (directory?['records'] as List? ?? []).cast<Json>();
   Future<void> sync() async {
-    if (syncing) return;
-    syncing = true;
-    if (serverInput.text.trim().isEmpty) {
-      note('Set your HTTPS server URL first.');
-      setState(() => page = 5);
-      syncing = false;
-      return;
-    }
+    if (syncing || !mounted) return;
+    serverInput.text = resolveServer(serverInput.text);
+    setState(() => syncing = true);
     try {
-      final d = await api.call('/directory');
-      if (d['version'] == null ||
-          d['countries'] is! List ||
-          d['records'] is! List ||
-          (d['countries'] as List).isEmpty) {
+      final data = await api.call('/directory');
+      if (data['version'] == null || data['countries'] is! List ||
+          data['records'] is! List || (data['countries'] as List).isEmpty) {
         throw const FormatException('Invalid directory');
       }
-      if (d['authoritative'] == false) {
+      if (data['authoritative'] == false) {
+        final detail = data['database_status'] == 'not_configured'
+            ? 'Public directory ready. Cloud features are not configured.'
+            : 'Server online. PostgreSQL unavailable; saved directory preserved. Check DATABASE_URL in Render.';
         lastSync = DateTime.now();
-        note(
-          d['database_status'] == 'not_configured'
-              ? 'Public directory ready. Cloud features are not configured.'
-              : 'Server online. PostgreSQL unavailable; saved directory preserved. Check DATABASE_URL in Render.',
-        );
+        if (mounted) setState(() {
+          syncSummary = data['database_status'] == 'not_configured' ? 'Public directory' : 'Saved directory · cloud limited';
+          syncDetail = detail;
+        });
+        note(detail);
         return;
       }
-      d['origin'] = 'server';
-      d['bundle_release'] = directory?['bundle_release'] ?? 2;
-      await store.replace(d);
+      data['origin'] = 'server';
+      data['bundle_release'] = directory?['bundle_release'] ?? 2;
+      await store.replace(data);
       lastSync = DateTime.now();
-      if (mounted) setState(() => directory = d);
-      note('Directory synchronized · version ${d['version']}');
-    } catch (e) {
-      note('Directory request failed. Saved contacts remain available. $e');
+      final detail = 'Directory synchronized · version ${data['version']}';
+      if (mounted) setState(() {
+        directory = data; syncSummary = 'Directory updated'; syncDetail = detail;
+      });
+      note(detail);
+    } catch (error) {
+      final detail = 'Directory request failed. Saved contacts remain available. $error';
+      if (mounted) setState(() { syncSummary = 'Saved directory · update failed'; syncDetail = detail; });
+      note(detail);
     } finally {
-      syncing = false;
+      if (mounted) setState(() => syncing = false);
     }
   }
 
@@ -400,6 +412,10 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
   }
 
   Future<void> saveSafety() async {
+    if (!safetyAvailable) {
+      note('Private safety data is unavailable. Retry loading it in My Safety before making changes.');
+      return;
+    }
     try {
       await vault.save(safety);
     } catch (_) {
@@ -1078,7 +1094,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
                     style: const TextStyle(
                       fontSize: 10,
                       letterSpacing: 1,
-                      color: Color(0xffe9938d),
+                      color: Color(0xff659beb),
                     ),
                   ),
                 ),
@@ -1103,7 +1119,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
             ),
             Text(
               r['name'],
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700, height: 1.3),
             ),
             const SizedBox(height: 8),
             Text(
@@ -1120,6 +1136,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
                       onPressed: () => unawaited(contactService(c)),
                       child: Text(
                         '${c['kind'].toString().toUpperCase()}  ${c['value']}',
+                        maxLines: 2, overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   )
@@ -1153,7 +1170,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    '${r['notes'] ?? 'No additional notes.'}\nHours: ${r['hours'] ?? 'not confirmed'}\nLanguages: ${r['languages'] ?? 'not confirmed'}\n${r['accessibility'] ?? 'Accessibility not confirmed.'}\nChecked: ${r['checked_at'].toString().substring(0, 10)} · ${r['verification_status']}\nGovernment webpage checked; service availability not tested.',
+                    '${r['notes'] ?? 'No additional notes.'}\nHours: ${r['hours'] ?? 'not confirmed'}\nLanguages: ${r['languages'] ?? 'not confirmed'}\n${r['accessibility'] ?? 'Accessibility not confirmed.'}\nChecked: ${checkedDate(r['checked_at'])} · ${r['verification_status']}\nGovernment webpage checked; service availability not tested.',
                     style: const TextStyle(fontSize: 12, height: 1.7),
                   ),
                 ),
@@ -1171,219 +1188,203 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     );
   }
 
-  Widget heading(String label, String title, String description) => Padding(
-    padding: const EdgeInsets.only(bottom: 23, top: 8),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          t(label),
-          style: const TextStyle(
-            color: Color(0xffe99088),
-            fontSize: 11,
-            letterSpacing: 1.7,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          t(title.replaceAll('\n', ' ')),
-          style: const TextStyle(
-            fontSize: 35,
-            height: 1.1,
-            fontWeight: FontWeight.w600,
-            letterSpacing: -1,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Text(t(description), style: const TextStyle(fontSize: 13, height: 1.6)),
+
+  String get countryName {
+    final countries = (directory?['countries'] as List? ?? []).cast<Json>();
+    for (final item in countries) {
+      if (item['code'] == country) return item['name'].toString();
+    }
+    return t('Current country');
+  }
+
+  void updateCountry(String value) {
+    if (active || countdown != null || preparingSOS) return;
+    setState(() {
+      country = value; conversation = []; category = ''; channel = '';
+      query = ''; regionFilter = ''; favoritesOnly = false;
+      queryInput.clear(); regionInput.clear();
+    });
+    unawaited(prefs?.setString('country', value));
+  }
+
+  void browseCategory(String value) {
+    setState(() {
+      category = value; query = ''; regionFilter = ''; channel = ''; favoritesOnly = false;
+      queryInput.clear(); regionInput.clear(); page = 3;
+    });
+  }
+
+  void openJournal() => navigatorKey.currentState?.push(
+    MaterialPageRoute<void>(builder: (_) => const IncidentJournal()),
+  );
+
+  void openPractice() {
+    final dialogContext = navigatorKey.currentContext;
+    if (dialogContext == null) return;
+    showDialog<void>(context: dialogContext, builder: (_) => const SosPractice());
+  }
+
+  Future<void> retrySafety() async {
+    try {
+      final saved = await (widget.safetyLoader?.call() ?? vault.load());
+      saved['contacts'] = saved['contacts'] is List ? saved['contacts'] : <dynamic>[];
+      saved['history'] = saved['history'] is List ? saved['history'] : <dynamic>[];
+      if (mounted) setState(() { safety = saved; safetyAvailable = true; });
+    } catch (_) {
+      note('Private safety data is still unavailable. Try again after unlocking your device.');
+    }
+  }
+
+  Future<void> chooseCountry() async {
+    if (active || countdown != null || preparingSOS) {
+      note('Finish or cancel the SOS session before changing country.');
+      return;
+    }
+    final sheetContext = navigatorKey.currentContext;
+    if (sheetContext == null) return;
+    var filter = '';
+    final selected = await showModalBottomSheet<String>(
+      context: sheetContext, isScrollControlled: true, useSafeArea: true,
+      builder: (context) => StatefulBuilder(builder: (context, setSheetState) {
+        final countries = ((directory?['countries'] as List?) ?? []).cast<Json>()
+            .where((item) => item['name'].toString().toLowerCase().contains(filter) ||
+                item['code'].toString().toLowerCase().contains(filter)).toList();
+        return Padding(
+          padding: EdgeInsets.only(left: 20, right: 20, bottom: MediaQuery.viewInsetsOf(context).bottom + 16),
+          child: SizedBox(height: MediaQuery.sizeOf(context).height * 0.72,
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              const SizedBox(height: 16),
+              Text(t('Current country'), style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 14),
+              TextField(autofocus: false,
+                decoration: const InputDecoration(labelText: 'Search country', prefixIcon: Icon(Icons.search)),
+                onChanged: (value) => setSheetState(() => filter = value.trim().toLowerCase())),
+              const SizedBox(height: 10),
+              Expanded(child: countries.isEmpty
+                ? const Center(child: Text('No matching country. Try another name.'))
+                : ListView.builder(itemCount: countries.length, itemBuilder: (context, index) {
+                    final item = countries[index];
+                    return ListTile(title: Text(item['name'].toString()), subtitle: Text(item['code'].toString()),
+                      trailing: item['code'] == country ? const Icon(Icons.check_circle_outline) : null,
+                      onTap: () => Navigator.pop(context, item['code'].toString()));
+                  })),
+            ])),
+        );
+      }),
+    );
+    if (selected != null && mounted) updateCountry(selected);
+  }
+
+  void showConnectionDetails() {
+    final dialogContext = navigatorKey.currentContext;
+    if (dialogContext == null) return;
+    showDialog<void>(context: dialogContext, builder: (context) => AlertDialog(
+      title: const Text('Directory status'), content: SelectableText(syncDetail),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+        TextButton(onPressed: () { Navigator.pop(context); unawaited(sync()); }, child: const Text('Synchronize directory')),
       ],
-    ),
+    ));
+  }
+
+  String checkedDate(dynamic value) {
+    final parsed = DateTime.tryParse(value?.toString() ?? '');
+    return parsed == null ? 'Not recorded' : parsed.toIso8601String().split('T').first;
+  }
+
+
+  Widget heading(String label, String title, String description) => Builder(
+    builder: (context) => Padding(padding: const EdgeInsets.only(bottom: 22, top: 4), child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(t(label), style: TextStyle(color: Theme.of(context).colorScheme.primary,
+          fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
+        const SizedBox(height: 8),
+        Text(t(title.replaceAll('\n', ' ')), style: Theme.of(context).textTheme.headlineLarge),
+        const SizedBox(height: 10),
+        Text(t(description), style: Theme.of(context).textTheme.bodyMedium),
+      ],
+    )),
   );
-  Widget sosButton() => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(28),
-      child: Semantics(
-        label:
-            'SOS. Long press or double tap to start a cancellable countdown.',
-        button: true,
-        child: GestureDetector(
-          onLongPress: startCountdown,
-          child: ElevatedButton(
-            onPressed: startCountdown,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xffe34e4e),
-              foregroundColor: Colors.white,
-              shape: const CircleBorder(
-                side: BorderSide(color: Color(0xff8e303c), width: 8),
-              ),
-              fixedSize: const Size(168, 168),
-              elevation: 12,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.emergency_outlined, size: 36),
-                Text(
-                  t('SOS'),
-                  style: TextStyle(
-                    fontSize: 29,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 3,
-                  ),
-                ),
-                Text(
-                  t('Start SOS'),
-                  style: TextStyle(fontSize: 8, letterSpacing: 1.5),
-                ),
-              ],
-            ),
-          ),
+
+  Widget sosButton() => Center(child: Padding(
+    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
+    child: Semantics(label: 'SOS. Start a cancellable five-second countdown.', button: true,
+      child: GestureDetector(onLongPress: startCountdown, child: ElevatedButton(
+        onPressed: startCountdown,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xffd83750), foregroundColor: Colors.white,
+          shadowColor: const Color(0x66d83750), elevation: 8,
+          shape: const CircleBorder(side: BorderSide(color: Color(0xfff88999), width: 4)),
+          fixedSize: const Size(172, 172), padding: const EdgeInsets.all(22),
         ),
-      ),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Icon(Icons.emergency_outlined, size: 34),
+          const SizedBox(height: 5),
+          FittedBox(fit: BoxFit.scaleDown, child: Text(t('SOS'), style: const TextStyle(
+            fontSize: 30, fontWeight: FontWeight.w800, letterSpacing: 2))),
+          const SizedBox(height: 3),
+          FittedBox(fit: BoxFit.scaleDown, child: Text(t('Start SOS'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500))),
+        ]),
+      )),
     ),
-  );
+  ));
+
   List<Widget> home() => [
-    heading(
-      'Home',
-      'Help is closer\nthan you think.',
-      'Find the right service. Make the next step clear.',
-    ),
-    Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Emergency readiness',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              country.isEmpty
-                  ? 'Choose your country to see local services.'
-                  : 'Country: $country',
-            ),
-            Text(
-              directory == null
-                  ? 'Loading the directory'
-                  : 'Saved directory available offline',
-            ),
-            Text('Trusted contacts: ${(safety['contacts'] as List).length}'),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: () =>
-                      setState(() => page = country.isEmpty ? 5 : 4),
-                  icon: const Icon(Icons.shield_outlined),
-                  label: Text(country.isEmpty ? 'Choose country' : 'My Safety'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () => showDialog<void>(
-                    context: navigatorKey.currentContext!,
-                    builder: (_) => const SosPractice(),
-                  ),
-                  icon: const Icon(Icons.timer_outlined),
-                  label: const Text('Practice SOS'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    ),
-    Card(
-      color: const Color(0xff241c2c),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            const Text(
-              'IN AN EMERGENCY?',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                letterSpacing: 2,
-              ),
-            ),
-            sosButton(),
-            const Text(
-              'One moment. One action.',
-              style: TextStyle(color: Colors.white, fontSize: 20),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Press Call in the dialer. Consented trusted-contact alerts can be automatic.',
-              style: TextStyle(color: Colors.white70, fontSize: 11),
-            ),
-            const SizedBox(height: 15),
-          ],
-        ),
-      ),
-    ),
-    Card(
-      color: const Color(0xff202d47),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Icon(Icons.auto_awesome, color: Colors.white),
-            const SizedBox(height: 18),
-            const Text(
-              'You don’t have to\nfigure it out alone.',
-              style: TextStyle(color: Colors.white, fontSize: 27, height: 1.2),
-            ),
-            const SizedBox(height: 15),
-            const Text(
-              'Describe what’s happening. Contacts come from the directory, never an AI guess.',
-              style: TextStyle(color: Colors.white70, height: 1.6),
-            ),
-            const SizedBox(height: 20),
-            FilledButton.tonal(
-              onPressed: () => setState(() => page = 2),
-              child: const Text('Talk to the assistant ↗'),
-            ),
-          ],
-        ),
-      ),
-    ),
+    heading('Home', 'Help is closer than you think.', 'Find the right service. Make the next step clear.'),
+    Card(child: Padding(padding: const EdgeInsets.fromLTRB(20, 20, 20, 22), child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          const Icon(Icons.emergency_outlined, color: Color(0xffed5a6f)),
+          const SizedBox(width: 8),
+          Expanded(child: Text(t('Emergency'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700))),
+          if (emergencyNumber != null) Text(emergencyNumber!, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+        ]),
+        sosButton(),
+        Text(country.isEmpty ? 'Confirm your country before starting.' : countryName,
+          textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 7),
+        const Text('Five seconds to cancel. Press Call in the dialer.',
+          textAlign: TextAlign.center, style: TextStyle(fontSize: 13, height: 1.5)),
+      ]))),
+    const SizedBox(height: 6),
+    SafetyFeatureGrid(children: [
+      SafetyFeature(icon: Icons.travel_explore_outlined, title: t('All Helplines'),
+        caption: 'Find a service', onTap: () => setState(() => page = 3)),
+      SafetyFeature(icon: Icons.forum_outlined, title: t('AI Assistant'),
+        caption: 'Describe what you need', onTap: () => setState(() => page = 2)),
+      SafetyFeature(icon: Icons.perm_media_outlined, title: 'Incident journal',
+        caption: 'Photos, videos and notes', onTap: openJournal),
+      SafetyFeature(icon: Icons.shield_outlined, title: t('My Safety'),
+        caption: 'Contacts and check-ins', onTap: () => setState(() => page = 4)),
+    ]),
+    const SizedBox(height: 22),
+    const SafetySectionHeading(title: 'Your setup'),
+    Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(children: [
+      ListTile(contentPadding: EdgeInsets.zero,
+        leading: const Icon(Icons.public_outlined),
+        title: Text(country.isEmpty ? 'Choose your current country' : countryName),
+        subtitle: const Text('Country determines emergency services'),
+        trailing: const Icon(Icons.chevron_right), onTap: chooseCountry),
+      const Divider(height: 16),
+      ListTile(contentPadding: EdgeInsets.zero,
+        leading: const Icon(Icons.people_outline),
+        title: Text(safetyAvailable ? '${(safety['contacts'] as List).length} trusted contacts' : 'Private safety data unavailable'),
+        subtitle: const Text('Review your contacts and alert choices'),
+        trailing: const Icon(Icons.chevron_right), onTap: () => setState(() => page = 4)),
+      const Divider(height: 16),
+      ListTile(contentPadding: EdgeInsets.zero,
+        leading: const Icon(Icons.timer_outlined),
+        title: const Text('Practice SOS'), subtitle: const Text('Try the countdown on this device'),
+        trailing: const Icon(Icons.chevron_right), onTap: openPractice),
+    ]))),
+    const SizedBox(height: 8),
+    const SafetySectionHeading(title: 'Browse by need'),
+    Wrap(spacing: 8, runSpacing: 8, children: categories.take(6).map((item) => ActionChip(
+      label: Text(item['name'].toString()), onPressed: () => browseCategory(item['id'].toString()),
+    )).toList()),
     const SizedBox(height: 20),
-    const Text(
-      'What kind of help do you need?',
-      style: TextStyle(fontSize: 21),
-    ),
-    const SizedBox(height: 12),
-    Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: categories
-          .take(6)
-          .map(
-            (c) => ActionChip(
-              label: Text(c['name']),
-              onPressed: () {
-                setState(() {
-                  category = c['id'];
-                  page = 3;
-                });
-              },
-            ),
-          )
-          .toList(),
-    ),
-    const SizedBox(height: 20),
-    Text(
-      '${records.map((r) => r['country']).toSet().length} countries with source-checked contacts · 193 UN member states in registry',
-      style: const TextStyle(fontSize: 12, height: 1.7),
-    ),
-    const Text(
-      'Government pages checked; operational availability and worldwide completeness are not certified.',
-      style: TextStyle(fontSize: 11, height: 1.7),
-    ),
+    Text('${records.map((record) => record['country']).toSet().length} countries with source-checked records',
+      style: const TextStyle(fontSize: 12, height: 1.5)),
   ];
   List<Widget> sos() => [
     heading(
@@ -1558,10 +1559,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         ])
           ListTile(
             title: Text(label),
-            onTap: () => setState(() {
-              category = value;
-              page = 3;
-            }),
+            onTap: () => browseCategory(value),
           ),
       ],
     ),
@@ -1711,9 +1709,14 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         'All Helplines',
         'Government sources and verification dates on every service card.',
       ),
+      if (query.isNotEmpty || category.isNotEmpty || channel.isNotEmpty || regionFilter.isNotEmpty || favoritesOnly)
+        Align(alignment: AlignmentDirectional.centerEnd,
+          child: TextButton.icon(onPressed: () => browseCategory(''), icon: const Icon(Icons.filter_alt_off_outlined), label: const Text('Clear filters'))),
       TextField(
         controller: queryInput,
-        decoration: const InputDecoration(
+        decoration: InputDecoration(
+          suffixIcon: query.isEmpty ? null : IconButton(tooltip: 'Clear search', icon: const Icon(Icons.close_rounded),
+            onPressed: () => setState(() { query = ''; queryInput.clear(); })),
           labelText: 'Search service or number',
           prefixIcon: Icon(Icons.search),
           border: OutlineInputBorder(),
@@ -1722,6 +1725,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       ),
       const SizedBox(height: 12),
       DropdownButtonFormField<String>(
+        key: ValueKey('category-$category'),
         initialValue: category,
         decoration: const InputDecoration(
           labelText: 'Category',
@@ -1741,6 +1745,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       ),
       const SizedBox(height: 12),
       DropdownButtonFormField<String>(
+        key: ValueKey('channel-$channel'),
         initialValue: channel,
         decoration: const InputDecoration(
           labelText: 'Channel',
@@ -1761,10 +1766,13 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         Text(
           country.isEmpty
               ? 'Confirm your current country first.'
-              : 'Official helpline information not yet verified.',
+              : records.any((record) => record['country'] == country)
+                  ? 'No matching services. Clear a filter or try another search.'
+                  : 'Official helpline information not yet verified.',
           style: const TextStyle(fontSize: 22),
         ),
       TextField(
+        controller: regionInput,
         decoration: const InputDecoration(
           labelText: 'State / region / city',
           border: OutlineInputBorder(),
@@ -1890,7 +1898,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         'Global SOS emergency card\nCountry: $country\nPreferred language: $languageCode\n'
         'Trusted contacts:\n$contacts\nMedical notes: ${safety['medical'] ?? ''}';
     showDialog<void>(
-      context: context,
+      context: navigatorKey.currentContext!,
       builder: (dialog) => AlertDialog(
         title: const Text('Offline emergency card'),
         content: SingleChildScrollView(child: SelectableText(card)),
@@ -1959,20 +1967,23 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     ));
   }
 
-  List<Widget> safetyPage() => [
+  List<Widget> safetyPage() => !safetyAvailable ? [
+    heading('My Safety', 'My Safety', 'Your saved private data could not be opened.'),
+    const Card(child: Padding(padding: EdgeInsets.all(20), child: Text('Contacts and safety settings have been retained. Unlock your device and retry loading them.'))),
+    FilledButton(onPressed: retrySafety, child: const Text('Retry private data')),
+  ] : [
     heading(
       'My Safety',
       'My Safety',
       'Contacts are stored in encrypted device storage. No account required.',
     ),
-    FilledButton.icon(
-      onPressed: () => navigatorKey.currentState?.push(
-        MaterialPageRoute<void>(builder: (_) => const IncidentJournal()),
-      ),
-      icon: const Icon(Icons.perm_media_outlined),
-      label: const Text('Incident journal · photos, videos and notes'),
-    ),
-    const SizedBox(height: 12),
+    SafetyFeatureGrid(children: [
+      SafetyFeature(icon: Icons.perm_media_outlined, title: 'Incident journal', caption: 'Photos, videos and notes', onTap: openJournal),
+      SafetyFeature(icon: Icons.route_outlined, title: 'Trip plan and personal reminder', caption: 'Prepare and share a plan', onTap: showTripPlanner),
+      SafetyFeature(icon: Icons.badge_outlined, title: 'Offline emergency card', caption: 'View your saved details', onTap: showEmergencyCard),
+    ]),
+    const SizedBox(height: 24),
+    const SafetySectionHeading(title: 'Trusted contacts'),
     FilledButton.icon(
       onPressed: addContact,
       icon: const Icon(Icons.person_add_outlined),
@@ -1986,7 +1997,12 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     ...(safety['contacts'] as List).cast<Json>().map(
       (c) => trustedContact(c, controls: true),
     ),
-    SafetyHub(
+    Card(child: ExpansionTile(
+      maintainState: true,
+      leading: const Icon(Icons.notifications_outlined),
+      title: const Text('Alerts and check-ins'),
+      subtitle: const Text('Private inbox, location and sharing'),
+      children: [Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 16), child: SafetyHub(
       api: api,
       t: t,
       contacts: (safety['contacts'] as List).cast<Json>(),
@@ -1997,17 +2013,9 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         setState(() => safety['inbox'] = value);
         await saveSafety();
       },
-    ),
-    OutlinedButton.icon(
-      onPressed: showTripPlanner,
-      icon: const Icon(Icons.route_outlined),
-      label: const Text('Trip plan and personal reminder'),
-    ),
-    OutlinedButton.icon(
-      onPressed: showEmergencyCard,
-      icon: const Icon(Icons.badge_outlined),
-      label: const Text('View offline emergency card'),
-    ),
+    ))],
+    )),
+
     const SizedBox(height: 20),
     TextFormField(
       initialValue: safety['medical']?.toString() ?? '',
@@ -2081,6 +2089,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         ),
   ];
   List<Widget> settings() => [
+    const Padding(padding: EdgeInsets.only(bottom: 12), child: Text('Global SOS · v0.5.2', style: TextStyle(fontSize: 12))),
     heading(
       'Settings',
       'Settings',
@@ -2112,6 +2121,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       ),
     ),
     DropdownButtonFormField<String>(
+      key: ValueKey('country-$country'),
       initialValue: country,
       isExpanded: true,
       decoration: const InputDecoration(
@@ -2130,11 +2140,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       onChanged: active || countdown != null
           ? null
           : (v) {
-              setState(() {
-                country = v ?? '';
-                conversation = [];
-              });
-              unawaited(prefs?.setString('country', country));
+              updateCountry(v ?? '');
             },
     ),
     SwitchListTile(
@@ -2311,198 +2317,118 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       child: const Text('Delete private safety data'),
     ),
   ];
+
   @override
   Widget build(BuildContext context) {
-    final darkScheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xff619aff),
-      brightness: Brightness.dark,
-      surface: const Color(0xff101010),
-      error: const Color(0xffff626a),
-    );
-    final scheme = light
-        ? ColorScheme.fromSeed(
-            seedColor: const Color(0xff1455bf),
-            surface: Colors.white,
-            error: const Color(0xffb91c32),
-            brightness: Brightness.light,
-          )
-        : darkScheme;
-    final titles = [
-      'Home',
-      'SOS',
-      'AI Assistant',
-      'All Helplines',
-      'My Safety',
-      'Settings',
-    ];
+    final titles = ['Home', 'SOS', 'AI Assistant', 'All Helplines', 'My Safety', 'Settings'];
+    final statusLabel = syncing ? 'Updating directory…' : directory == null ? 'Loading directory…'
+        : syncSummary;
     return MaterialApp(
       navigatorKey: navigatorKey,
       builder: (context, child) => Directionality(
-        textDirection: AppLanguages.get(languageCode)['direction'] == 'rtl'
-            ? TextDirection.rtl
-            : TextDirection.ltr,
+        textDirection: AppLanguages.get(languageCode)['direction'] == 'rtl' ? TextDirection.rtl : TextDirection.ltr,
         child: child!,
       ),
-      title: 'Global SOS AI',
+      title: 'Global SOS',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: scheme,
-        scaffoldBackgroundColor: light ? Colors.white : Colors.black,
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide.none,
-          ),
-        ),
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            minimumSize: const Size(48, 50),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-          ),
-        ),
-        appBarTheme: const AppBarTheme(centerTitle: false, elevation: 0),
-        cardTheme: CardThemeData(
-          elevation: 0,
-          margin: const EdgeInsets.only(bottom: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-            side: BorderSide(
-              color: contrast
-                  ? (light ? Colors.black : Colors.white)
-                  : scheme.outlineVariant,
-            ),
-          ),
-        ),
-        textTheme: contrast
-            ? Typography.material2021().black.apply(
-                bodyColor: light ? Colors.black : Colors.white,
-                displayColor: light ? Colors.black : Colors.white,
-              )
-            : null,
-      ),
-      home: Builder(
-        builder: (ctx) => Scaffold(
+      theme: buildSafetyTheme(light: light, contrast: contrast),
+      home: Builder(builder: (ctx) => PopScope(
+        canPop: page == 0 && countdown == null && !preparingSOS,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop || preparingSOS) return;
+          if (countdown != null) {
+            countdownTimer?.cancel();
+            ++locationGeneration;
+            pendingLocation = null;
+            position = null;
+          }
+          setState(() { countdown = null; page = 0; });
+        },
+        child: RepaintBoundary(
+        key: const ValueKey('app-preview'),
+        child: Scaffold(
           appBar: AppBar(
-            title: const Row(
-              children: [
-                Icon(Icons.add_circle, color: Color(0xffef6b63)),
-                SizedBox(width: 9),
-                Text(
-                  'GLOBAL SOS AI',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ],
-            ),
+            leading: page == 5 ? BackButton(onPressed: () => setState(() => page = 0)) : null,
+            title: Row(children: [
+              Container(width: 32, height: 32, decoration: BoxDecoration(
+                color: const Color(0xffd83750), borderRadius: BorderRadius.circular(11)),
+                child: const Icon(Icons.add_rounded, color: Colors.white, size: 24)),
+              const SizedBox(width: 9),
+              Expanded(child: Text(page == 5 ? t('Settings') : 'Global SOS',
+                maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: -0.4))),
+            ]),
             actions: [
               TextButton(
-                onPressed: () => setState(() => page = 5),
-                child: Text(country.isEmpty ? 'Country' : country),
+                onPressed: active || countdown != null || preparingSOS ? null : chooseCountry,
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.public_outlined, size: 18), const SizedBox(width: 5),
+                  Text(country.isEmpty ? 'Country' : country, style: const TextStyle(fontSize: 13)),
+                ]),
               ),
-              IconButton(
-                tooltip: 'Synchronize directory',
-                icon: const Icon(Icons.sync),
-                onPressed: sync,
-              ),
-              IconButton(
-                tooltip: 'Settings & country',
-                icon: const Icon(Icons.settings_outlined),
-                onPressed: () => setState(() => page = 5),
-              ),
+              if (page != 5) IconButton(tooltip: 'Settings & country',
+                icon: const Icon(Icons.tune_rounded), onPressed: () => setState(() => page = 5)),
+              const SizedBox(width: 6),
             ],
           ),
           body: directory == null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(25),
-                    child: Text(status),
-                  ),
-                )
-              : Column(
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      color: scheme.surfaceContainerHighest,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 10,
-                      ),
-                      child: Text(
-                        '${country.isEmpty ? 'CONFIRM YOUR COUNTRY' : country}  ·  $status',
-                        style: const TextStyle(fontSize: 10),
-                        maxLines: 3,
-                      ),
-                    ),
-                    Expanded(
-                      child: Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 840),
-                          child: ListView(
-                            padding: const EdgeInsets.all(22),
-                            children: switch (page) {
-                              0 => home(),
-                              1 => sos(),
-                              2 => chat(),
-                              3 => directoryPage(),
-                              4 => safetyPage(),
-                              _ => settings(),
-                            },
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: page > 4 ? 0 : page,
-            onDestinationSelected: (v) => setState(() => page = v),
-            destinations: [
-              NavigationDestination(
-                icon: const Icon(Icons.home_outlined),
-                label: t('Home'),
-              ),
-              NavigationDestination(
-                icon: const Icon(Icons.emergency_outlined),
-                label: t('SOS'),
-              ),
-              NavigationDestination(
-                icon: const Icon(Icons.auto_awesome_outlined),
-                label: t('AI Assistant'),
-              ),
-              NavigationDestination(
-                icon: const Icon(Icons.grid_view_outlined),
-                label: t('All Helplines'),
-              ),
-              NavigationDestination(
-                icon: const Icon(Icons.shield_outlined),
-                label: t('My Safety'),
-              ),
-            ],
-          ),
-          drawer: Drawer(
-            child: ListView(
-              children: [
-                const DrawerHeader(child: Text('Global SOS AI')),
-                for (var i = 0; i < titles.length; i++)
-                  ListTile(
-                    title: Text(t(titles[i])),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      setState(() => page = i);
+            ? Center(child: Padding(padding: const EdgeInsets.all(28), child: Column(
+                mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.shield_outlined, size: 48), const SizedBox(height: 18),
+                  Text(status, textAlign: TextAlign.center),
+                  const SizedBox(height: 18),
+                  OutlinedButton(onPressed: initialize, child: const Text('Retry loading')),
+                ])))
+            : Column(children: [
+                Padding(padding: const EdgeInsets.fromLTRB(20, 0, 20, 6),
+                  child: Material(color: Theme.of(ctx).colorScheme.surface, borderRadius: BorderRadius.circular(14),
+                    child: InkWell(key: const ValueKey('directory-status'), onTap: showConnectionDetails,
+                      borderRadius: BorderRadius.circular(14),
+                      child: Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        child: Row(children: [
+                          Icon(syncing ? Icons.sync_rounded : Icons.offline_pin_outlined, size: 17,
+                            color: Theme.of(ctx).colorScheme.primary),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(statusLabel, maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12))),
+                          const Icon(Icons.info_outline_rounded, size: 17),
+                        ]))))),
+                Expanded(child: SafeArea(top: false, bottom: false, child: Center(child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 840),
+                  child: ListView(
+                    key: PageStorageKey('safety-page-$page-$country'),
+                    keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
+                    children: switch (page) {
+                      0 => home(), 1 => sos(), 2 => chat(), 3 => directoryPage(), 4 => safetyPage(), _ => settings(),
                     },
                   ),
-              ],
-            ),
+                )))),
+              ]),
+          bottomNavigationBar: page == 5 ? null : NavigationBar(
+            selectedIndex: page,
+            labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+            onDestinationSelected: (value) {
+              FocusManager.instance.primaryFocus?.unfocus();
+              setState(() => page = value);
+            },
+            destinations: [
+              NavigationDestination(icon: const Icon(Icons.home_outlined), selectedIcon: const Icon(Icons.home_rounded), label: t('Home')),
+              NavigationDestination(icon: const Icon(Icons.emergency_outlined), selectedIcon: const Icon(Icons.emergency_rounded), label: t('SOS')),
+              NavigationDestination(icon: const Icon(Icons.forum_outlined), selectedIcon: const Icon(Icons.forum_rounded), label: t('AI Assistant')),
+              NavigationDestination(icon: const Icon(Icons.travel_explore_outlined), label: t('All Helplines')),
+              NavigationDestination(icon: const Icon(Icons.shield_outlined), selectedIcon: const Icon(Icons.shield_rounded), label: t('My Safety')),
+            ],
           ),
+          drawer: Drawer(child: SafeArea(child: ListView(children: [
+            const Padding(padding: EdgeInsets.all(24), child: Text('Global SOS', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700))),
+            for (var index = 0; index < titles.length; index++) ListTile(
+              selected: page == index, title: Text(t(titles[index])),
+              onTap: () { Navigator.pop(ctx); setState(() => page = index); },
+            ),
+          ]))),
         ),
-      ),
+      ))),
     );
   }
 
@@ -2515,6 +2441,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     unawaited(store.close());
     chatInput.dispose();
     queryInput.dispose();
+    regionInput.dispose();
     serverInput.dispose();
     super.dispose();
   }
@@ -2720,3 +2647,4 @@ class _TripPlanDialogState extends State<_TripPlanDialog> {
       child: const Text('Close'))],
   );
 }
+
