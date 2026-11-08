@@ -31,10 +31,10 @@ export function createApp({pool=null,env=process.env,dbRequired=false}={}){
  app.get('/api/releases/android',downloads.metadata);
  app.get('/downloads/Global-SOS-AI.apk',downloads.apk);
  app.get('/downloads/Global-SOS-AI.apk.sha256',downloads.checksum);
- app.get('/health',(req,res)=>res.json({status:'alive',version:'0.5.0'}));
+ app.get('/health',(req,res)=>res.json({status:'alive',version:'0.5.2'}));
  app.get('/ready',run(async(req,res)=>{let available=databaseReady();if(available)try{await withDB(db=>db.query('SELECT 1'));}catch{available=false;}res.status(dbRequired&&!available?503:200).json({status:dbRequired&&!available?'database_unavailable':'ready',storage:available?'postgresql':'read_only_snapshot',directory_available:true,database:databaseStatus(),generative_ai:env.AI_PROVIDER==='openai-compatible'?'configured_not_health_checked':'not_configured'});}));
- app.get('/api/status',(req,res)=>res.json({version:'0.5.0',server:'online',directory:'available',database:databaseStatus(),live_sessions_enabled:databaseReady(),online_ai:env.AI_PROVIDER==='openai-compatible'?'configured':'not_configured'}));
- app.get('/api/config',(req,res)=>res.json({app_base_url:env.APP_BASE_URL,version:'0.5.0',categories,countries:seed.countries,ai_configured:env.AI_PROVIDER==='openai-compatible',accounts_enabled:false,notifications:notificationConfig(env),live_sessions_enabled:databaseReady()}));
+ app.get('/api/status',(req,res)=>res.json({version:'0.5.2',server:'online',directory:'available',database:databaseStatus(),live_sessions_enabled:databaseReady(),online_ai:env.AI_PROVIDER==='openai-compatible'?'configured':'not_configured'}));
+ app.get('/api/config',(req,res)=>res.json({app_base_url:env.APP_BASE_URL,version:'0.5.2',categories,countries:seed.countries,ai_configured:env.AI_PROVIDER==='openai-compatible',accounts_enabled:false,notifications:notificationConfig(env),live_sessions_enabled:databaseReady()}));
  app.get('/api/directory',run(async(req,res)=>{const s=await readSnapshot();const version=String(s.version);if(s.authoritative&&req.query.version===version)return res.json({unchanged:true,version,authoritative:true,storage:s.storage});res.json(s);}));
  app.get('/api/helplines',run(async(req,res)=>{const q=z.object({country:z.enum(seed.countries.map(c=>c.code)),category:z.enum(categoryIds).optional(),q:z.string().max(200).optional(),channel:z.enum(['phone','sms','whatsapp','email','web']).optional(),region:z.string().max(200).optional()}).parse(req.query);const s=await readSnapshot();res.json({records:filterRecords(s.records,q),version:s.version});}));
  app.post('/api/chat',rateLimit({windowMs:60000,limit:15,standardHeaders:'draft-8',legacyHeaders:false}),run(async(req,res)=>{

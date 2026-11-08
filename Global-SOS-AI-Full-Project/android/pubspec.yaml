@@ -1,7 +1,7 @@
 name: global_sos_ai
 description: Government-source emergency contacts and personal safety tools.
 publish_to: none
-version: 0.5.1+8
+version: 0.5.2+9
 environment:
   sdk: '>=3.8.0 <4.0.0'
 dependencies:

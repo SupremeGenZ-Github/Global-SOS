@@ -232,7 +232,24 @@ class _IncidentJournalState extends State<IncidentJournal> {
     },
     child: Scaffold(
       appBar: AppBar(title: const Text('Incident journal')),
-      body: ListView(padding: const EdgeInsets.all(18), children: [
+
+      bottomNavigationBar: editing ? Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        child: SafeArea(top: false, child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface,
+          border: Border(top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant))),
+        child: Row(children: [
+          Expanded(child: FilledButton.icon(onPressed: busy ? null : () => run(save),
+            icon: const Icon(Icons.check_rounded), label: const Text('Save incident'))),
+          const SizedBox(width: 10),
+          IconButton(tooltip: 'Discard draft', onPressed: busy ? null : discard,
+            icon: const Icon(Icons.close_rounded)),
+        ]),
+      ))) : null,
+
+      body: ListView(keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        padding: const EdgeInsets.all(18), children: [
         const Text('Photos, videos and notes', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w600)),
         const SizedBox(height: 10),
         const Text('Entries stay in this app until you export or share them. Notes use encrypted storage. Media files use the app’s private storage and are removed if you uninstall. Export anything you need to retain.'),
@@ -249,8 +266,7 @@ class _IncidentJournalState extends State<IncidentJournal> {
           ]),
           const Text('Up to 10 attachments, 100 MB per file and 200 MB per entry. Video capture requests a 60-second limit from the camera app.'),
           for (var index = 0; index < media.length; index++) attachment(media[index], index: index),
-          FilledButton(onPressed: busy ? null : () => run(save), child: const Text('Save incident')),
-          TextButton(onPressed: busy ? null : discard, child: const Text('Discard draft')),
+
         ] else ...[
           Text('${records.length} / 50 saved incidents'),
           if (ready && records.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Text('Start an entry to keep notes and media together.')),
@@ -281,3 +297,4 @@ class _IncidentJournalState extends State<IncidentJournal> {
     ),
   );
 }
+
