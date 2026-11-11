@@ -1,7 +1,7 @@
-name: Global SOS v5.2 checks and Android build
+name: Global SOS v6 checks and Android build
 on:
   push:
-    branches: [codex/global-sos-v52]
+    branches: [codex/global-sos-v6]
     paths-ignore:
       - 'Global-SOS-AI-Full-Project/releases/android/**'
   pull_request:
@@ -10,7 +10,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: v52-${{ github.ref }}
+  group: v6-${{ github.ref }}
   cancel-in-progress: true
 defaults:
   run:
@@ -32,6 +32,13 @@ jobs:
           npm install --no-save --package-lock=false playwright@1.56.1
           npx playwright install --with-deps chromium
           node scripts/ui-smoke.mjs
+      - name: Save web UI evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Global-SOS-v6-Web-previews
+          path: Global-SOS-AI-Full-Project/artifacts/web-previews/
+          if-no-files-found: warn
   android:
     permissions:
       contents: write
@@ -64,7 +71,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Global-SOS-v52-UI-previews
+          name: Global-SOS-v6-UI-previews
           path: Global-SOS-AI-Full-Project/android/build/previews/
           if-no-files-found: warn
       - run: flutter build apk --release --target-platform android-arm64 --dart-define=API_BASE_URL=https://global-sos.onrender.com
@@ -74,37 +81,37 @@ jobs:
       - name: Verify artifacts
         run: |
           mkdir -p artifacts
-          cp android/build/app/outputs/flutter-apk/app-release.apk artifacts/Global-SOS-v52-TEST-SIGNED.apk
-          cp android/build/app/outputs/bundle/release/app-release.aab artifacts/Global-SOS-v52-TEST-SIGNED.aab
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose artifacts/Global-SOS-v52-TEST-SIGNED.apk
-          jarsigner -verify artifacts/Global-SOS-v52-TEST-SIGNED.aab
+          cp android/build/app/outputs/flutter-apk/app-release.apk artifacts/Global-SOS-v6-TEST-SIGNED.apk
+          cp android/build/app/outputs/bundle/release/app-release.aab artifacts/Global-SOS-v6-TEST-SIGNED.aab
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose artifacts/Global-SOS-v6-TEST-SIGNED.apk
+          jarsigner -verify artifacts/Global-SOS-v6-TEST-SIGNED.aab
           if [ -d android/build/previews ]; then cp -r android/build/previews artifacts/previews; fi
           cd artifacts
           sha256sum *.apk *.aab > SHA256SUMS.txt
       - uses: actions/setup-node@v4
         with:
           node-version: '24.21.0'
-      - name: Package website with verified v5 APK
+      - name: Package website with verified v6 APK
         env:
           PACKAGE_OUTPUT_DIR: ${{ github.workspace }}/Global-SOS-AI-Full-Project/artifacts/packages
         run: |
           npm ci --include=dev
-          node scripts/stage-ci-release.mjs artifacts/Global-SOS-v52-TEST-SIGNED.apk
+          node scripts/stage-ci-release.mjs artifacts/Global-SOS-v6-TEST-SIGNED.apk
           npm test
           npm run build
           node scripts/verify-public-download.mjs
-          node scripts/package.mjs
+          node scripts/verify-package-privacy.mjs
       - uses: actions/upload-artifact@v4
         with:
-          name: Global-SOS-v52-Android
+          name: Global-SOS-v6-Android
           path: Global-SOS-AI-Full-Project/artifacts/
           if-no-files-found: error
       - name: Commit verified website download to the v5 release branch
-        if: github.ref == 'refs/heads/codex/global-sos-v52' && github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/codex/global-sos-v6' && github.event_name != 'pull_request'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -- releases/android
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m "Stage verified v5 APK for the website"
-          git push origin HEAD:refs/heads/codex/global-sos-v52
+          git commit -m "Stage verified v6 APK for the website"
+          git push origin HEAD:refs/heads/codex/global-sos-v6

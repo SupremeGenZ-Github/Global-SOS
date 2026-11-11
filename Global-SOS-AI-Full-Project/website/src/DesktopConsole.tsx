@@ -1,39 +1,10 @@
-type Service = {id:string; name:string; region?:string|null; channels:{kind:string;value:string}[]};
-
-export function DesktopConsole({country, services, online, contacts, onSOS, onNavigate, t}: {
-  t: (label: string) => string; country: string; services: Service[]; online: boolean; contacts: number;
-  onSOS: () => void; onNavigate: (tab:string) => void;
-}) {
-  return <section className="desktop-console" aria-label="Desktop safety console">
-    <div className="console-hero">
-      <div><p className="eyebrow">{t('Home')}</p><h1>{t('Help is closer than you think.')}</h1><p>{t('Find the right service. Make the next step clear.')}</p></div>
-      <button className="red-button" onClick={onSOS}>{t('Emergency controls')}</button>
-    </div>
-    <div className="console-metrics">
-      <article><span>{t('Current country')}</span><strong>{country || t("Choose country")}</strong></article>
-      <article><span>{t("Listed services")}</span><strong>{services.length}</strong></article>
-      <article><span>{t('Trusted contacts')}</span><strong>{contacts}</strong></article>
-      <article><span>{t("Browser connection")}</span><strong>{t(online ? 'Online' : 'Offline')}</strong></article>
-    </div>
-    <div className="console-grid">
-      <article className="service-card">
-        <h2>{t("Directory overview")}</h2>
-        <table><thead><tr><th>{t("Service")}</th><th>{t("Coverage")}</th><th>{t("Channels")}</th></tr></thead>
-          <tbody>{services.slice(0, 10).map(service => <tr key={service.id}>
-            <td>{service.name}</td><td>{service.region || t("National")}</td>
-            <td>{[...new Set(service.channels.map(channel => channel.kind))].join(', ')}</td>
-          </tr>)}</tbody></table>
-        {!services.length && <p>{t("Choose a country in the header to review its directory.")}</p>}
-        <button onClick={() => onNavigate('All Helplines')}>{t('All Helplines')}</button>
-      </article>
-      <article className="service-card console-actions"><button onClick={() => onNavigate('My Safety')}>Document an incident</button>
-        <h2>{t("Safety workspace")}</h2>
-        <button onClick={() => onNavigate('My Safety')}>{t('My Safety')}</button>
-        <button onClick={() => onNavigate('AI Assistant')}>{t('AI Assistant')}</button>
-        <button onClick={() => onNavigate('Settings')}>{t('Settings')}</button>
-        <button onClick={() => onNavigate('Download')}>{t('Download')}</button>
-        <a href="/mobile">{t("Open phone layout")}</a>
-      </article>
-    </div>
-  </section>;
+import {EmergencyIcon,NavIcon} from './Icons';
+type Service={id:string;name:string;region?:string|null;channels:{kind:string;value:string;immediate?:boolean}[]};
+export function DesktopConsole({country,services,online,contacts,onSOS,onNavigate,t}:{t:(s:string)=>string;country:string;services:Service[];online:boolean;contacts:number;onSOS:()=>void;onNavigate:(tab:string,section?:string)=>void}){
+ return <section className="desktop-console v6-desktop" aria-label="Desktop safety console">
+  <div className="v6-console-title"><div><span className="eyebrow accent">YOUR SAFETY WORKSPACE</span><h1>Help starts here.</h1><p>Find a service. Prepare your people. Make your next step clear.</p></div><span className="v6-badge">{online?'Browser connected':'Browser offline'}</span></div>
+  <div className="v6-console-grid"><section className="v6-console-primary"><div className="sos-panel v6-desktop-sos"><div className="v6-panel-heading"><span><EmergencyIcon/>{t('Emergency controls')}</span><span className="v6-badge">{country||t('Choose country')}</span></div><h2>A clear path<br/>to urgent help.</h2><p>Review your country and location choices, then start a cancellable five-second countdown.</p><button className="red-button" onClick={onSOS}><EmergencyIcon/>{t('Emergency controls')}<span>↗</span></button><small>Opens your phone dialer. Press Call there.</small></div><div className="v6-console-assistant"><NavIcon index={2}/><span className="eyebrow">A LITTLE GUIDANCE</span><h2>Not sure where<br/>to start?</h2><p>Describe what is happening. Find contacts from the reviewed directory.</p><button onClick={()=>onNavigate('AI Assistant')}>{t('AI Assistant')} ↗</button></div></section>
+   <section className="v6-console-side"><div className="v6-setup"><span className="eyebrow">BEFORE YOU NEED IT</span><h2>Your safety setup</h2><button onClick={()=>onNavigate('Settings')}><span className={'v6-step '+(country?'done':'')}>{country?'✓':'1'}</span><span><strong>{country||'Confirm your country'}</strong><small>Set your current jurisdiction</small></span><span>›</span></button><button onClick={()=>onNavigate('My Safety')}><span className={'v6-step '+(contacts?'done':'')}>{contacts?'✓':'2'}</span><span><strong>{contacts} trusted contacts</strong><small>People and alert preferences</small></span><span>›</span></button></div><div className="v6-workspace-links"><h2>Personal tools</h2><button onClick={()=>onNavigate('My Safety','journal')}>Document an incident <span>↗</span></button><button aria-label={t('My Safety')} onClick={()=>onNavigate('My Safety')}>{t('My Safety')} <span>↗</span></button><button onClick={()=>onNavigate('Download')}>Get the Android app <span>↗</span></button><a href="/mobile">Open phone layout ↗</a></div></section></div>
+  <div className="v6-section-heading"><div><span className="eyebrow">{country||'CONFIRM COUNTRY'}</span><h2>Directory overview</h2></div><button onClick={()=>onNavigate('All Helplines')}>{services.length} listed services ↗</button></div><div className="v6-service-preview">{services.slice(0,4).map(s=><article key={s.id}><span className="v6-step"><NavIcon index={3}/></span><h3>{s.name}</h3><p>{s.region||'National coverage'} · {[...new Set(s.channels.map(c=>c.kind))].join(' / ')}</p><button onClick={()=>onNavigate('All Helplines')}>View directory ↗</button></article>)}</div>{!services.length&&<div className="empty">Choose your country above to see its reviewed services.</div>}
+ </section>;
 }

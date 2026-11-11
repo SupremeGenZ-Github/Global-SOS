@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'services.dart';
+import 'app_design.dart';
 
 class IncidentJournal extends StatefulWidget {
   const IncidentJournal({super.key});
@@ -270,7 +271,8 @@ class _IncidentJournalState extends State<IncidentJournal> {
         ] else ...[
           Text('${records.length} / 50 saved incidents'),
           if (ready && records.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Text('Start an entry to keep notes and media together.')),
-          for (final record in records) Card(child: ExpansionTile(
+          for (final record in records) Card(child: SafetyDisclosure(
+            key: PageStorageKey('incident-${record['id']}'),
             leading: const Icon(Icons.folder_outlined), title: Text(record['title'] as String),
             subtitle: Text('${DateTime.tryParse(record['createdAt'] as String)?.toLocal() ?? record['createdAt']} · ${(record['media'] as List).length} attachments'),
             children: [Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

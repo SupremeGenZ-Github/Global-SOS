@@ -272,7 +272,9 @@ class DirectoryStore {
 
 class SafetyVault {
   final FlutterSecureStorage secure;
-  SafetyVault({FlutterSecureStorage? storage})
+  final Future<void> Function(String? value)? persist;
+  Future<void> _pending = Future<void>.value();
+  SafetyVault({FlutterSecureStorage? storage, this.persist})
     : secure =
           storage ??
           const FlutterSecureStorage(
@@ -284,9 +286,14 @@ class SafetyVault {
     return jsonDecode(s) as Json;
   }
 
-  Future<void> save(Json data) =>
-      secure.write(key: 'safety', value: jsonEncode(data));
-  Future<void> clear() => secure.delete(key: 'safety');
+  Future<void> _enqueue(String? value) {
+    final operation = _pending.then((_) => persist != null ? persist!(value)
+      : value == null ? secure.delete(key: 'safety') : secure.write(key: 'safety', value: value));
+    _pending = operation.then<void>((_) {}, onError: (Object error, StackTrace stack) {});
+    return operation;
+  }
+  Future<void> save(Json data) => _enqueue(jsonEncode(data));
+  Future<void> clear() => _enqueue(null);
 }
 
 class ApiFailure implements Exception {

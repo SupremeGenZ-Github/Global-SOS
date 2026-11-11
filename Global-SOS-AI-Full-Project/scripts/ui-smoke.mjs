@@ -1,6 +1,7 @@
 import {chromium} from 'playwright';
+import {checkV6} from './v6-ui-checks.mjs';
 import {spawn} from 'node:child_process';
-import {readFile} from 'node:fs/promises';
+import {readFile,mkdir} from 'node:fs/promises';
 import assert from 'node:assert/strict';
 const port=4178, origin='http://127.0.0.1:'+port;
 const server=spawn(process.execPath,['backend/server.mjs'],{env:{...process.env,PORT:String(port),DATABASE_URL:'',APP_BASE_URL:origin,CORS_ORIGINS:origin},stdio:'ignore'});
@@ -22,6 +23,7 @@ try {
  });
  await page.goto(origin,{waitUntil:'networkidle'});
  await page.locator('nav button').filter({hasText:'My Safety'}).click();
+ await page.getByText('Automatic alert preferences',{exact:true}).click();
  await page.getByPlaceholder('Configured operator token').fill('test-token-only-never-a-provider-secret');
  await page.locator('nav button').filter({hasText:'Home'}).click();
  await page.locator('.sos-orb').click();
@@ -74,6 +76,7 @@ try {
  await desktop.getByRole('region',{name:'Desktop safety console'}).waitFor();
  assert.equal(await desktop.locator('.phone-home').isVisible(),false);
  await desktop.locator('.desktop-console').getByRole('button',{name:'My Safety',exact:true}).click();
+ await desktop.getByRole('button',{name:'Tools',exact:true}).click();
  await desktop.getByRole('region',{name:'Safety tools'}).waitFor();
  await desktop.goto(origin+'/mobile');
  await desktop.locator('.phone-home').waitFor();
@@ -84,16 +87,22 @@ try {
  const journalPage = await journalContext.newPage();
  await journalPage.goto(origin+'/mobile');
  await journalPage.locator('nav button').filter({hasText:'My Safety'}).click();
+ await journalPage.getByRole('button',{name:'Incident journal',exact:true}).click();
  const journal = journalPage.getByRole('region',{name:'Incident journal'});
  await journal.getByRole('button',{name:'New incident',exact:false}).click();
  await journal.getByLabel('Incident title',{exact:true}).fill('Test incident');
  await journal.getByLabel('Notes',{exact:true}).fill('Private test notes');
+ await journalPage.locator('.journal-editor').evaluate(el=>el.dataset.retentionFixture='draft');
+ await journalPage.getByRole('button',{name:'Contacts',exact:true}).click();
+ assert.equal(await journalPage.locator('[data-retention-fixture="draft"]').count(),1,'hidden incident draft keeps the same editor');
+ await journalPage.getByRole('button',{name:'Incident journal',exact:true}).click();
+ assert.equal(await journal.getByLabel('Notes',{exact:true}).inputValue(),'Private test notes','switching safety sections preserves an incident draft');
  const photo = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jzTYAAAAASUVORK5CYII=','base64');
  await journal.getByLabel('Choose incident attachments').setInputFiles({name:'fixture.png',mimeType:'image/png',buffer:photo});
  await journal.getByRole('button',{name:'Save incident',exact:true}).click();
  await journal.getByText('Incident saved on this device.').waitFor();
  await journalPage.reload();
- await journalPage.locator('nav button').filter({hasText:'My Safety'}).click();
+ await journalPage.getByRole('button',{name:'Incident journal',exact:true}).click();
  await journal.locator('.journal-record-title').click();
  assert.match(await journal.innerText(),/Private test notes/);
  const exporting = journalPage.waitForEvent('download');
@@ -109,4 +118,9 @@ try {
  await journalContext.close();
  console.log('PASS: incident notes and photo persist across reload, export as ZIP and delete from browser storage');
 
+ await checkV6(browser,origin);
+} catch(error) {
+ await mkdir('artifacts/web-previews',{recursive:true});let index=0;
+ for(const context of browser?.contexts()??[])for(const page of context.pages()){try{await page.screenshot({path:'artifacts/web-previews/failure-'+(++index)+'.png'});}catch{}}
+ throw error;
 } finally {await browser?.close();server.kill();}

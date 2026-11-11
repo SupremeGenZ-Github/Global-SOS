@@ -14,6 +14,7 @@ import 'sos_practice.dart';
 import 'safety_hub.dart';
 import 'incident_journal.dart';
 import 'app_design.dart';
+import 'contact_editor.dart';
 
 const officialServer = 'https://global-sos.onrender.com';
 const configuredServer = String.fromEnvironment(
@@ -45,8 +46,10 @@ class GlobalSOS extends StatefulWidget {
     this.safetyLoader,
     this.categoryLoader,
     this.emergencyDialer,
+    this.assistantRequester,
   });
   final Future<void> Function(String)? emergencyDialer;
+  final Future<Json> Function(String country, String message)? assistantRequester;
   final Future<Json> Function()? directoryLoader;
   final Future<Json> Function()? safetyLoader;
   final Future<List<Json>> Function()? categoryLoader;
@@ -60,6 +63,8 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
   final vault = SafetyVault();
   final model = OfflineModel();
   final chatInput = TextEditingController();
+  final assistantScroll = ScrollController();
+  int chatGeneration = 0, settingsOrigin = 0;
   final queryInput = TextEditingController();
   final regionInput = TextEditingController();
   final serverInput = TextEditingController(text: resolveServer(null));
@@ -286,7 +291,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
   bool confirmCountry() {
     if (country.isNotEmpty) return true;
     note('Confirm your current country first.');
-    setState(() => page = 5);
+    openSettings();
     return false;
   }
 
@@ -733,10 +738,12 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
           ],
         ),
       );
-      if (ok == true && mounted) {
+      if (ok == true && mounted && !active && countdown == null && !preparingSOS) {
         setState(() {
+          ++chatGeneration; busy = false; category = ''; channel = ''; query = ''; favoritesOnly = false; queryInput.clear();
           country = suggested;
           regionFilter = address?['region']?.toString() ?? '';
+          regionInput.text = regionFilter;
           conversation = [];
         });
         await prefs?.setString('country', country);
@@ -874,11 +881,14 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       return;
     }
     if (!confirmCountry()) return;
+    final requestGeneration = ++chatGeneration;
+    final requestCountry = country;
     chatInput.clear();
     setState(() {
       busy = true;
       conversation.add({'text': text, 'user': true});
     });
+    scrollAssistant();
     String intent = classify(text);
     final learnedIntent = intent == 'other' ? IntentModel.predict(text) : null;
     intent = learnedIntent ?? intent;
@@ -890,11 +900,11 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     try {
       if (allowOnline && !isUrgent(text) && learnedIntent == null) {
         if (serverInput.text.isEmpty) throw StateError('Set server URL');
-        final data = await api.call(
+        final data = await (widget.assistantRequester?.call(requestCountry, text) ?? api.call(
           '/chat',
           method: 'POST',
-          body: {'country': country, 'message': text, 'allow_online': true},
-        );
+          body: {'country': requestCountry, 'message': text, 'allow_online': true},
+        ));
         if (data['authoritative'] == false) {
           selected = selectRecords(
             records,
@@ -976,7 +986,8 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         ];
       }
     }
-    if (!mounted) return;
+    if (!mounted || requestGeneration != chatGeneration || requestCountry != country) return;
+    selected = selected.where((record) => record['country'] == requestCountry).toList();
     setState(() {
       chatMode = mode;
       conversation.add({
@@ -992,6 +1003,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       });
       busy = false;
     });
+    scrollAssistant();
   }
 
   Future<void> importContact() async {
@@ -1014,181 +1026,62 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
   }
 
   Future<void> addContact() async {
-    final name = TextEditingController(),
-        phone = TextEditingController(),
-        email = TextEditingController();
-    final result = await showDialog<bool>(
-      context: navigatorKey.currentContext ?? context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Trusted contact'),
-        scrollable: true,
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: name,
-              maxLength: 100,
-              decoration: const InputDecoration(labelText: 'Name'),
-            ),
-            TextField(
-              controller: phone,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'Phone with country code',
-              ),
-            ),
-            TextField(
-              controller: email,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(labelText: 'Email (optional)'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (name.text.trim().isEmpty ||
-                  !RegExp(r'^\+?[0-9 ()-]{3,25}$').hasMatch(phone.text)) {
-                return;
-              }
-              Navigator.pop(ctx, true);
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-    if (result == true) {
-      (safety['contacts'] as List).add({
-        'id': DateTime.now().microsecondsSinceEpoch.toString(),
-        'name': name.text.trim(),
-        'phone': phone.text,
-        'email': email.text.trim(),
-        'alertConsent': false,
-        'methods': <String>[],
-      });
-      await saveSafety();
-      if (mounted) setState(() {});
+    if (!safetyAvailable) return;
+    final dialogContext = navigatorKey.currentContext;
+    if (dialogContext == null) return;
+    final contact = await showDialog<Json>(context: dialogContext, builder: (_) => const ContactEditor());
+    if (contact == null || !mounted) return;
+    setState(() => (safety['contacts'] as List).add(contact));
+    await saveSafety();
+  }
+
+  String categoryLabel(dynamic id) {
+    for (final item in categories) {
+      if (item['id'] == id) return item['name'].toString();
     }
-    name.dispose();
-    phone.dispose();
-    email.dispose();
+    return id.toString();
   }
 
   Widget helpline(Json r) {
-    final cs = (r['channels'] as List).cast<Json>();
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    (r['categories'] as List).join(' · ').toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 10,
-                      letterSpacing: 1,
-                      color: Color(0xff659beb),
-                    ),
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Toggle favorite',
-                  onPressed: () {
-                    setState(
-                      () => favorites.contains(r['id'])
-                          ? favorites.remove(r['id'])
-                          : favorites.add(r['id']),
-                    );
-                    unawaited(prefs?.setStringList('favorites', favorites));
-                  },
-                  icon: Icon(
-                    favorites.contains(r['id'])
-                        ? Icons.star
-                        : Icons.star_border,
-                    color: Colors.amber,
-                  ),
-                ),
-              ],
-            ),
-            Text(
-              r['name'],
-              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700, height: 1.3),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${r['city'] ?? r['region'] ?? r['country']} · ${r['jurisdiction']}',
-              style: const TextStyle(fontSize: 12),
-            ),
-            const SizedBox(height: 15),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: cs
-                  .map(
-                    (c) => FilledButton.tonal(
-                      onPressed: () => unawaited(contactService(c)),
-                      child: Text(
-                        '${c['kind'].toString().toUpperCase()}  ${c['value']}',
-                        maxLines: 2, overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
-            ...cs
-                .where((c) => c['notes'] != null)
-                .map(
-                  (c) => Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Text(
-                      '${c['kind'].toString().toUpperCase()}: ${c['notes']}',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ),
-                ),
-            const SizedBox(height: 8),
-            Text(
-              cs.any((c) => c['immediate'] == true)
-                  ? 'Has an emergency channel. Read channel restrictions.'
-                  : 'Support / reporting service. For immediate danger, use SOS.',
-              style: const TextStyle(fontSize: 12),
-            ),
-            ExpansionTile(
-              tilePadding: EdgeInsets.zero,
-              title: const Text(
-                'Source & service details',
-                style: TextStyle(fontSize: 12),
-              ),
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    '${r['notes'] ?? 'No additional notes.'}\nHours: ${r['hours'] ?? 'not confirmed'}\nLanguages: ${r['languages'] ?? 'not confirmed'}\n${r['accessibility'] ?? 'Accessibility not confirmed.'}\nChecked: ${checkedDate(r['checked_at'])} · ${r['verification_status']}\nGovernment webpage checked; service availability not tested.',
-                    style: const TextStyle(fontSize: 12, height: 1.7),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => unawaited(
-                    open(channelUri({'kind': 'web', 'value': r['source_url']})),
-                  ),
-                  child: const Text('Open official government source ↗'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
+    final channels = (r['channels'] as List).cast<Json>();
+    return Builder(builder: (context) => Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [Expanded(child: Text((r['categories'] as List).map(categoryLabel).join(' · ').toUpperCase(),
+          style: TextStyle(fontSize: 10, letterSpacing: .8, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary))),
+          IconButton(tooltip: 'Toggle favorite', onPressed: () {
+            setState(() => favorites.contains(r['id']) ? favorites.remove(r['id']) : favorites.add(r['id']));
+            unawaited(prefs?.setStringList('favorites', favorites));
+          }, icon: Icon(favorites.contains(r['id']) ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+            color: Theme.of(context).colorScheme.primary)),
+        ]),
+        Text(r['name'].toString(), style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700, height: 1.25)),
+        const SizedBox(height: 10),
+        Text('${r['city'] ?? r['region'] ?? r['country']} · ${r['jurisdiction']}', style: const TextStyle(fontSize: 12, height: 1.5)),
+        const SizedBox(height: 18),
+        Wrap(spacing: 8, runSpacing: 10, children: channels.map((channel) => FilledButton.tonalIcon(
+          onPressed: () => unawaited(contactService(channel)),
+          icon: Icon(channel['kind'] == 'phone' ? Icons.call_outlined : channel['kind'] == 'web' ? Icons.open_in_new_rounded : Icons.chat_bubble_outline_rounded, size: 18),
+          label: Padding(padding: const EdgeInsets.symmetric(vertical: 3), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(channel['kind'].toString().toUpperCase(), style: const TextStyle(fontSize: 10, letterSpacing: .7)),
+            Text(channel['value'].toString(), maxLines: 2, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+          ])),
+        )).toList()),
+        const SizedBox(height: 12),
+        Text(channels.any((channel) => channel['immediate'] == true)
+          ? 'Emergency channel listed. Check its restrictions.' : 'Support or reporting. For immediate danger, use SOS.',
+          style: const TextStyle(fontSize: 11, height: 1.5)),
+        SafetyDisclosure(key: PageStorageKey('source-details-${r['id']}'), tilePadding: EdgeInsets.zero, title: const Text('Source & service details', style: TextStyle(fontSize: 12)), children: [
+          for (final channel in channels.where((item) => item['notes'] != null))
+            Padding(padding: const EdgeInsets.only(bottom: 10), child: Text('${channel['kind']}: ${channel['notes']}', style: const TextStyle(fontSize: 12, height: 1.5))),
+          Align(alignment: AlignmentDirectional.centerStart, child: Text(
+            '${r['notes'] ?? 'No additional notes.'}\nHours: ${r['hours'] ?? 'not confirmed'}\nLanguages: ${r['languages'] ?? 'not confirmed'}\n${r['accessibility'] ?? 'Accessibility not confirmed.'}\nChecked: ${checkedDate(r['checked_at'])} · ${r['verification_status']}\nGovernment webpage checked; live availability untested.',
+            style: const TextStyle(fontSize: 12, height: 1.7))),
+          TextButton(onPressed: () => unawaited(open(channelUri({'kind': 'web', 'value': r['source_url']}))),
+            child: const Text('Open official government source ↗')),
+        ]),
+      ]))));
   }
-
 
   String get countryName {
     final countries = (directory?['countries'] as List? ?? []).cast<Json>();
@@ -1201,6 +1094,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
   void updateCountry(String value) {
     if (active || countdown != null || preparingSOS) return;
     setState(() {
+      ++chatGeneration; busy = false;
       country = value; conversation = []; category = ''; channel = '';
       query = ''; regionFilter = ''; favoritesOnly = false;
       queryInput.clear(); regionInput.clear();
@@ -1307,89 +1201,65 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     )),
   );
 
-  Widget sosButton() => Center(child: Padding(
-    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
-    child: Semantics(label: 'SOS. Start a cancellable five-second countdown.', button: true,
-      child: GestureDetector(onLongPress: startCountdown, child: ElevatedButton(
-        onPressed: startCountdown,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xffd83750), foregroundColor: Colors.white,
-          shadowColor: const Color(0x66d83750), elevation: 8,
-          shape: const CircleBorder(side: BorderSide(color: Color(0xfff88999), width: 4)),
-          fixedSize: const Size(172, 172), padding: const EdgeInsets.all(22),
-        ),
-        child: FittedBox(fit: BoxFit.scaleDown, child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.emergency_outlined, size: 34),
-          const SizedBox(height: 5),
-          Text(t('SOS'), style: const TextStyle(
-            fontSize: 30, fontWeight: FontWeight.w800, letterSpacing: 2)),
-          const SizedBox(height: 3),
-          Text(t('Start SOS'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+  Widget sosButton() => Semantics(label: 'SOS. Start a cancellable five-second countdown.', button: true,
+    child: Padding(padding: const EdgeInsets.symmetric(vertical: 18), child: ElevatedButton(
+      onPressed: startCountdown,
+      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xffd92f4a), foregroundColor: Colors.white,
+        elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22),
+          side: const BorderSide(color: Color(0xffff9cac)))),
+      child: Row(children: [
+        const Icon(Icons.emergency_rounded, size: 34), const SizedBox(width: 16),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+          Text(t('SOS'), style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: 2)),
+          const SizedBox(height: 4), Text(t('Start SOS'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
         ])),
-      )),
-    ),
-  ));
+        const Icon(Icons.north_east_rounded, size: 24),
+      ]),
+    )),
+  );
 
   List<Widget> home() => [
     heading('Home', 'Help is closer than you think.', 'Find the right service. Make the next step clear.'),
-    Card(child: Padding(padding: const EdgeInsets.fromLTRB(20, 20, 20, 22), child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center,
-          spacing: 12, runSpacing: 8, children: [
-          Row(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.emergency_outlined, color: Color(0xffed5a6f)),
-            const SizedBox(width: 8),
-            Text(t('Emergency'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-          ]),
-          if (emergencyNumber != null) Text(emergencyNumber!, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+    Card(child: Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(
+      gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
+        colors: light ? [const Color(0xffffedf1), Colors.white] : [const Color(0xff28151f), const Color(0xff101620)])),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center, spacing: 12, runSpacing: 10, children: [
+          Text(t('Emergency'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          SafetyStatusTag(label: country.isEmpty ? 'Confirm country' : country),
         ]),
         sosButton(),
-        Text(country.isEmpty ? 'Confirm your country before starting.' : countryName,
-          textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w600)),
+        Text(emergencyNumber == null ? 'Confirm your country to see its emergency shortcut.' : 'Emergency shortcut $emergencyNumber · $countryName',
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
         const SizedBox(height: 7),
-        const Text('Five seconds to cancel. Press Call in the dialer.',
-          textAlign: TextAlign.center, style: TextStyle(fontSize: 13, height: 1.5)),
+        const Text('Five seconds to cancel. Press Call in the dialer.', style: TextStyle(fontSize: 12, height: 1.5)),
       ]))),
-    const SizedBox(height: 6),
     SafetyFeatureGrid(children: [
-      SafetyFeature(icon: Icons.travel_explore_outlined, title: t('All Helplines'),
-        caption: 'Find a service', onTap: () => setState(() => page = 3)),
-      SafetyFeature(icon: Icons.forum_outlined, title: t('AI Assistant'),
-        caption: 'Describe what you need', onTap: () => setState(() => page = 2)),
-      SafetyFeature(icon: Icons.perm_media_outlined, title: 'Incident journal',
-        caption: 'Photos, videos and notes', onTap: openJournal),
-      SafetyFeature(icon: Icons.shield_outlined, title: t('My Safety'),
-        caption: 'Contacts and check-ins', onTap: () => setState(() => page = 4)),
+      SafetyFeature(icon: Icons.travel_explore_outlined, title: t('All Helplines'), caption: 'Find the right service', onTap: () => setState(() => page = 3)),
+      SafetyFeature(icon: Icons.auto_awesome_outlined, title: t('AI Assistant'), caption: 'Tell us what you need', onTap: () => setState(() => page = 2)),
     ]),
-    const SizedBox(height: 22),
-    const SafetySectionHeading(title: 'Your setup'),
-    Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(children: [
-      ListTile(contentPadding: EdgeInsets.zero,
-        leading: const Icon(Icons.public_outlined),
-        title: Text(country.isEmpty ? 'Choose your current country' : countryName),
-        subtitle: const Text('Country determines emergency services'),
-        trailing: const Icon(Icons.chevron_right), onTap: chooseCountry),
-      const Divider(height: 16),
-      ListTile(contentPadding: EdgeInsets.zero,
-        leading: const Icon(Icons.people_outline),
-        title: Text(safetyAvailable ? '${(safety['contacts'] as List).length} trusted contacts' : 'Private safety data unavailable'),
-        subtitle: const Text('Review your contacts and alert choices'),
-        trailing: const Icon(Icons.chevron_right), onTap: () => setState(() => page = 4)),
-      const Divider(height: 16),
-      ListTile(contentPadding: EdgeInsets.zero,
-        leading: const Icon(Icons.timer_outlined),
-        title: const Text('Practice SOS'), subtitle: const Text('Try the countdown on this device'),
-        trailing: const Icon(Icons.chevron_right), onTap: openPractice),
-    ]))),
-    const SizedBox(height: 8),
-    const SafetySectionHeading(title: 'Browse by need'),
-    Wrap(spacing: 8, runSpacing: 8, children: categories.take(6).map((item) => ActionChip(
-      label: Text(item['name'].toString()), onPressed: () => browseCategory(item['id'].toString()),
-    )).toList()),
-    const SizedBox(height: 20),
-    Text('${records.map((record) => record['country']).toSet().length} countries with source-checked records',
-      style: const TextStyle(fontSize: 12, height: 1.5)),
+    const SizedBox(height: 24),
+    SafetyPanel(title: 'Your safety setup', eyebrow: 'A LITTLE PREPARATION HELPS', children: [
+      SafetyActionRow(icon: country.isEmpty ? Icons.public_outlined : Icons.check_circle_outline,
+        title: country.isEmpty ? 'Confirm your current country' : countryName,
+        caption: 'Emergency numbers depend on where you are', onTap: chooseCountry),
+      const Divider(height: 1),
+      SafetyActionRow(icon: Icons.people_outline,
+        title: safetyAvailable ? '${(safety['contacts'] as List).length} trusted contacts' : 'Retry private safety data',
+        caption: 'Choose who can help and how to contact them', onTap: () => setState(() => page = 4)),
+      const Divider(height: 1),
+      SafetyActionRow(icon: Icons.timer_outlined, title: 'Practice SOS', caption: 'Try a countdown without calling or sending alerts', onTap: openPractice),
+    ]),
+    const SafetySectionHeading(title: 'What kind of help?'),
+    for (final item in categories.take(4)) Padding(padding: const EdgeInsets.only(bottom: 10), child: SafetyActionRow(
+      icon: Icons.arrow_outward_rounded, title: item['name'].toString(), caption: 'Browse reviewed contacts',
+      onTap: () => browseCategory(item['id'].toString()), filled: true)),
+    const SizedBox(height: 12),
+    Text('${records.map((record) => record['country']).toSet().length} countries with source-checked records · Live availability unconfirmed',
+      style: const TextStyle(fontSize: 11, height: 1.6)),
   ];
+
   void cancelCountdown() {
     countdownTimer?.cancel();
     ++locationGeneration;
@@ -1401,31 +1271,14 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     heading(
       'Emergency controls',
       'Emergency controls',
-      'After five seconds, opens the verified emergency number in your phone dialer. Press Call there. Cancel below to stop.',
+      'A clear path to urgent help. Confirm the country, choose your location preference, then start.',
     ),
     if (preparingSOS) const LinearProgressIndicator(),
-    Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${(safety['contacts'] as List).length} trusted contacts · ${safety['automaticAlerts'] == true ? 'Automatic alerts enabled' : 'Automatic alerts off'}',
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              '1  Choose location permission\n2  Five seconds to cancel\n3  Press Call in the dialer',
-            ),
-            TextButton(
-              onPressed: () => setState(() => page = 4),
-              child: const Text('Manage contacts and alert methods'),
-            ),
-          ],
-        ),
-      ),
-    ),
+    Card(child: SafetyDisclosure(key: const PageStorageKey('sos-plan'), leading: const Icon(Icons.shield_outlined), title: const Text('Your SOS plan'),
+      subtitle: Text('${(safety['contacts'] as List).length} trusted contacts · ${safety['automaticAlerts'] == true ? 'Automatic alerts on' : 'Automatic alerts off'}'),
+      children: [const Padding(padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        child: Text('1 · Review location choices\n2 · Five seconds to cancel\n3 · Press Call in the dialer')),
+        TextButton(onPressed: () => setState(() => page = 4), child: const Text('Manage contacts and alert methods'))])),
     if (emergencyNumber != null)
       Text(
         'Emergency shortcut: $emergencyNumber',
@@ -1442,6 +1295,8 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
                 style: const TextStyle(fontSize: 32),
               ),
               const SizedBox(height: 15),
+              LinearProgressIndicator(value: countdown! / 5, color: const Color(0xffd92f4a), minHeight: 6),
+              const SizedBox(height: 16),
               const Text('Use the pinned Cancel button below to stop.'),
             ],
           ),
@@ -1544,25 +1399,18 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     heading(
       'AI Assistant',
       'AI Assistant',
-      'Confirm your country. Describe the help you need.',
+      'Describe what is happening. Find the right contact.',
     ),
-    ExpansionTile(
-      title: Text(t('Help me choose')),
-      children: [
-        for (final (label, value) in [
-          ('Medical emergency', 'ambulance'),
-          ('Fire and rescue', 'fire'),
-          ('Personal safety', 'police'),
-          ('Online fraud', 'cyber'),
-          ('Domestic violence', 'domestic'),
-          ('Child protection', 'child'),
-        ])
-          ListTile(
-            title: Text(label),
-            onTap: () => browseCategory(value),
-          ),
-      ],
-    ),
+    if (conversation.isEmpty) Builder(builder: (context) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24), child: Column(children: [
+        Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.primaryContainer, borderRadius: BorderRadius.circular(22)),
+          child: Icon(Icons.auto_awesome_rounded, size: 34, color: Theme.of(context).colorScheme.onPrimaryContainer)),
+        const SizedBox(height: 18), const Text('What kind of help do you need?', textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, height: 1.25)),
+        const SizedBox(height: 10), const Text('Choose an example, or type below. Share only what is needed.',
+          textAlign: TextAlign.center, style: TextStyle(fontSize: 13, height: 1.6)),
+      ]))),
     if (conversation.isEmpty)
       Wrap(
         spacing: 8,
@@ -1580,6 +1428,24 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
             ),
         ],
       ),
+    SafetyDisclosure(
+      key: const PageStorageKey('assistant-categories'),
+      title: Text(t('Help me choose')),
+      children: [
+        for (final (label, value) in [
+          ('Medical emergency', 'ambulance'),
+          ('Fire and rescue', 'fire'),
+          ('Personal safety', 'police'),
+          ('Online fraud', 'cyber'),
+          ('Domestic violence', 'domestic'),
+          ('Child protection', 'child'),
+        ])
+          ListTile(
+            title: Text(label),
+            onTap: () => browseCategory(value),
+          ),
+      ],
+    ),
     if (conversation.isNotEmpty && !busy)
       Align(
         alignment: AlignmentDirectional.centerEnd,
@@ -1589,6 +1455,8 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
           label: const Text('Clear conversation'),
         ),
       ),
+    Card(child: SafetyDisclosure(key: const PageStorageKey('assistant-routing'), title: const Text('Routing preferences'), leading: const Icon(Icons.tune_rounded),
+      children: [Padding(padding: const EdgeInsets.all(16), child: Column(children: [
     SwitchListTile(
       contentPadding: EdgeInsets.zero,
       title: const Text('Allow online AI routing'),
@@ -1603,17 +1471,10 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
           ? 'Online mode with local fallback'
           : '${model.loaded ? 'Local model loaded' : 'Optional local model not loaded'} · No chat text sent online',
     ),
-    if (conversation.isEmpty)
-      const Padding(
-        padding: EdgeInsets.symmetric(vertical: 40),
-        child: Text(
-          'What kind of help do you need?\nFor example: “There is smoke in my building.”',
-          style: TextStyle(fontSize: 20, height: 1.7),
-        ),
-      ),
+]))])),
     ...conversation.map(
       (m) => Card(
-        color: m['user'] == true ? const Color(0xff253650) : null,
+        color: m['user'] == true ? (light ? const Color(0xffe6edfc) : const Color(0xff1b2b45)) : null,
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -1623,7 +1484,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
                 m['user'] == true ? 'YOU' : m['mode'] ?? chatMode,
                 style: TextStyle(
                   fontSize: 10,
-                  color: m['user'] == true ? Colors.white70 : null,
+                  color: m['user'] == true ? (light ? const Color(0xff375079) : Colors.white70) : null,
                 ),
               ),
               const SizedBox(height: 8),
@@ -1631,7 +1492,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
                 m['text'],
                 style: TextStyle(
                   height: 1.6,
-                  color: m['user'] == true ? Colors.white : null,
+                  color: m['user'] == true ? (light ? const Color(0xff15233b) : Colors.white) : null,
                 ),
               ),
               if (m['user'] != true && !silentMode)
@@ -1661,39 +1522,48 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       ),
     ),
     if (busy) const LinearProgressIndicator(),
-    OutlinedButton.icon(
-      icon: const Icon(Icons.mic),
-      label: const Text('Voice input'),
-      onPressed: () async {
-        try {
-          note(
-            'Android speech service opens next. Offline recognition is preferred; its own network and privacy settings apply.',
-          );
-          final text = await DeviceTools.listen(voiceLanguage);
-          if (text != null) chatInput.text = text;
-        } catch (_) {
-          note(
-            'Voice input unavailable. Install a speech recognition service or type your message.',
-          );
-        }
-      },
-    ),
-    TextField(
-      controller: chatInput,
-      maxLength: 2000,
-      minLines: 1,
-      maxLines: 4,
-      decoration: const InputDecoration(
-        labelText: 'Tell me what’s happening…',
-        border: OutlineInputBorder(),
-      ),
-      onSubmitted: (_) => sendChat(),
-    ),
-    FilledButton(
-      onPressed: busy ? null : sendChat,
-      child: const Text('Send ↗'),
-    ),
   ];
+
+  Widget assistantPage() => Column(children: [
+    Expanded(child: ListView(controller: assistantScroll,
+      key: PageStorageKey('assistant-$country'), keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 20), children: chat())),
+    Builder(builder: (context) => Container(key: const ValueKey('assistant-composer'),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface,
+        border: Border(top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant))),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextField(controller: chatInput, maxLength: 2000, minLines: 1, maxLines: 3,
+          textInputAction: TextInputAction.send,
+          decoration: const InputDecoration(labelText: 'Tell me what’s happening…', counterText: ''),
+          onSubmitted: (_) => sendChat()),
+        const SizedBox(height: 8),
+        Row(children: [IconButton(tooltip: 'Voice input', icon: const Icon(Icons.mic_none_rounded), onPressed: () async {
+          try { final text = await DeviceTools.listen(voiceLanguage); if (text != null && mounted) chatInput.text = text; }
+          catch (_) { note('Voice input unavailable. You can type your message instead.'); }
+        }), const SizedBox(width: 6),
+          Expanded(child: Text(allowOnline ? 'Online with local fallback' : 'On-device routing', style: Theme.of(context).textTheme.labelSmall)),
+          FilledButton(key: const ValueKey('assistant-send'), onPressed: busy ? null : sendChat, child: const Row(mainAxisSize: MainAxisSize.min, children: [Text('Send'), SizedBox(width: 8), Icon(Icons.arrow_upward_rounded, size: 18)]))]),
+      ]))),
+  ]);
+
+  void scrollAssistant() => WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (mounted && assistantScroll.hasClients) {
+      final context = navigatorKey.currentContext;
+      if (context != null && MediaQuery.disableAnimationsOf(context)) {
+        assistantScroll.jumpTo(assistantScroll.position.maxScrollExtent);
+      } else {
+        assistantScroll.animateTo(assistantScroll.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 220), curve: Curves.easeOut);
+      }
+    }
+  });
+
+  void openSettings() {
+    settingsOrigin = page == 5 ? 0 : page;
+    setState(() => page = 5);
+  }
+
   List<Widget> directoryPage() {
     final filtered = selectRecords(
       records,
@@ -1744,8 +1614,11 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         onChanged: (v) => setState(() => category = v ?? ''),
       ),
       const SizedBox(height: 12),
+      Card(child: SafetyDisclosure(key: const PageStorageKey('directory-filters'), title: const Text('More filters'), leading: const Icon(Icons.filter_alt_outlined),
+        children: [Padding(padding: const EdgeInsets.all(16), child: Column(children: [
       DropdownButtonFormField<String>(
         key: ValueKey('channel-$channel'),
+        isExpanded: true,
         initialValue: channel,
         decoration: const InputDecoration(
           labelText: 'Channel',
@@ -1762,15 +1635,6 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         onChanged: (v) => setState(() => channel = v ?? ''),
       ),
       const SizedBox(height: 16),
-      if (filtered.isEmpty)
-        Text(
-          country.isEmpty
-              ? 'Confirm your current country first.'
-              : records.any((record) => record['country'] == country)
-                  ? 'No matching services. Clear a filter or try another search.'
-                  : 'Official helpline information not yet verified.',
-          style: const TextStyle(fontSize: 22),
-        ),
       TextField(
         controller: regionInput,
         decoration: const InputDecoration(
@@ -1784,6 +1648,16 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         value: favoritesOnly,
         onChanged: (v) => setState(() => favoritesOnly = v),
       ),
+]))])),
+      if (filtered.isEmpty)
+        Text(
+          country.isEmpty
+              ? 'Confirm your current country first.'
+              : records.any((record) => record['country'] == country)
+                  ? 'No matching services. Clear a filter or try another search.'
+                  : 'Official helpline information not yet verified.',
+          style: const TextStyle(fontSize: 22),
+        ),
       Text(
         '${filtered.length} services match. Channels appear only when officially published.',
       ),
@@ -1977,12 +1851,6 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       'My Safety',
       'Contacts are stored in encrypted device storage. No account required.',
     ),
-    SafetyFeatureGrid(children: [
-      SafetyFeature(icon: Icons.perm_media_outlined, title: 'Incident journal', caption: 'Photos, videos and notes', onTap: openJournal),
-      SafetyFeature(icon: Icons.route_outlined, title: 'Trip plan', caption: 'Route, reminders and sharing', onTap: showTripPlanner),
-      SafetyFeature(icon: Icons.badge_outlined, title: 'Offline emergency card', caption: 'View your saved details', onTap: showEmergencyCard),
-    ]),
-    const SizedBox(height: 24),
     const SafetySectionHeading(title: 'Trusted contacts'),
     FilledButton.icon(
       onPressed: addContact,
@@ -1999,7 +1867,16 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     ...(safety['contacts'] as List).cast<Json>().map(
       (c) => trustedContact(c, controls: true),
     ),
-    Card(child: ExpansionTile(
+    const SizedBox(height: 18),
+    SafetyPanel(title: 'Personal tools', children: [
+      SafetyActionRow(icon: Icons.perm_media_outlined, title: 'Incident journal', caption: 'Photos, videos and notes', onTap: openJournal),
+      const Divider(height: 1),
+      SafetyActionRow(icon: Icons.route_outlined, title: 'Trip plan', caption: 'Route, reminders and sharing', onTap: showTripPlanner),
+      const Divider(height: 1),
+      SafetyActionRow(icon: Icons.badge_outlined, title: 'Offline emergency card', caption: 'View and share your saved details', onTap: showEmergencyCard),
+    ]),
+    Card(child: SafetyDisclosure(
+      key: const PageStorageKey('safety-sharing'),
       maintainState: true,
       leading: const Icon(Icons.notifications_outlined),
       title: const Text('Alerts and check-ins'),
@@ -2044,6 +1921,8 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     const Text('Favorite services', style: TextStyle(fontSize: 22)),
     ...records.where((r) => favorites.contains(r['id'])).map(helpline),
     const SizedBox(height: 20),
+    Card(child: SafetyDisclosure(key: const PageStorageKey('automatic-alerts'), title: const Text('Automatic alert preferences'), leading: const Icon(Icons.send_outlined),
+      children: [Padding(padding: const EdgeInsets.all(18), child: Column(children: [
     SwitchListTile(
       title: const Text(
         'Automatically alert permitted trusted contacts after SOS',
@@ -2079,6 +1958,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         unawaited(saveSafety());
       },
     ),
+      ]))])),
     const Text('Session history', style: TextStyle(fontSize: 22)),
     ...(safety['history'] as List)
         .take(30)
@@ -2091,12 +1971,13 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         ),
   ];
   List<Widget> settings() => [
-    const Padding(padding: EdgeInsets.only(bottom: 12), child: Text('Global SOS · v0.5.2', style: TextStyle(fontSize: 12))),
+    const Padding(padding: EdgeInsets.only(bottom: 12), child: Text('Global SOS · v0.6.0', style: TextStyle(fontSize: 12))),
     heading(
       'Settings',
       'Settings',
       'Set your country manually. GPS alone never decides an emergency jurisdiction.',
     ),
+    SafetyPanel(title: 'Appearance & country', children: [
     DropdownButtonFormField<String>(
       key: ValueKey('language-$languageCode'),
       initialValue: languageCode,
@@ -2163,6 +2044,8 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         unawaited(prefs?.setBool('contrast', v));
       },
     ),
+]),
+    Card(child: SafetyDisclosure(key: const PageStorageKey('voice-location-settings'), title: const Text('Voice & location preferences'), leading: const Icon(Icons.tune_rounded), children: [Padding(padding: const EdgeInsets.all(20), child: Column(children: [
     const SizedBox(height: 20),
     DropdownButtonFormField<String>(
       initialValue: voiceLanguage,
@@ -2205,7 +2088,8 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         unawaited(prefs?.setBool('addressConsent', v));
       },
     ),
-    const Text('Website & backend', style: TextStyle(fontSize: 23)),
+]))])),
+    SafetyPanel(title: 'Directory & connectivity', children: [
     OutlinedButton.icon(
       icon: const Icon(Icons.download_outlined),
       label: const Text('Open website APK download page'),
@@ -2232,6 +2116,8 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     const SizedBox(height: 10),
     OutlinedButton(onPressed: sync, child: const Text('Synchronize directory')),
     const SizedBox(height: 24),
+]),
+    Card(child: SafetyDisclosure(key: const PageStorageKey('offline-model-settings'), title: const Text('Optional offline model'), leading: const Icon(Icons.memory_rounded), children: [Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
     const Text(
       'Optional offline language model',
       style: TextStyle(fontSize: 23),
@@ -2296,15 +2182,24 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       ],
     ),
     const SizedBox(height: 24),
-    const Text('Privacy & limitations', style: TextStyle(fontSize: 23)),
+]))])),
+    Card(child: SafetyDisclosure(key: const PageStorageKey('privacy-settings'), title: const Text('Privacy & device data'), leading: const Icon(Icons.lock_outline_rounded), children: [Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
     const Text(
       'Public-service calls, SMS, WhatsApp and email open external applications; complete each action there. Optional provider alerts notify only consenting trusted contacts you explicitly enable, with a configured private backend.\n\nLocation sharing requires consent and a private server session. Links expire after one hour. Mark Safe or Cancel removes stored positions. Sharing stops when the app leaves the foreground.\n\nCountry detection gives a coarse offline suggestion and optional Android address lookup; confirm it yourself. No medical diagnosis, guaranteed response, background tracking or automatic emergency dispatch. Online routing requires your own configured server. Government webpage checks do not certify live availability.\n\nThe model identifies intent only. Untrusted model text is never displayed as contact information.',
       style: TextStyle(height: 1.7),
     ),
     OutlinedButton(
-      onPressed: active
+      onPressed: active || countdown != null || preparingSOS
           ? null
           : () async {
+              final ctx = navigatorKey.currentContext;
+              if (ctx == null) return;
+              final confirmed = await showDialog<bool>(context: ctx, builder: (dialog) => AlertDialog(
+                title: const Text('Delete private safety data?'),
+                content: const Text('This removes contacts, medical notes, trip plans, preferences and safety history from this app. Incident journals are managed separately. Export anything you need first.'),
+                actions: [TextButton(onPressed: () => Navigator.pop(dialog, false), child: const Text('Keep data')),
+                  TextButton(onPressed: () => Navigator.pop(dialog, true), child: const Text('Delete data'))]));
+              if (confirmed != true || !mounted || active || countdown != null || preparingSOS) return;
               await vault.clear();
               await prefs?.remove('favorites');
               if (mounted) {
@@ -2318,11 +2213,12 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
             },
       child: const Text('Delete private safety data'),
     ),
+]))])),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final titles = ['Home', 'SOS', 'AI Assistant', 'All Helplines', 'My Safety', 'Settings'];
+    const navPages = [0, 3, 1, 2, 4];
     final statusLabel = syncing ? 'Updating directory…' : directory == null ? 'Loading directory…'
         : syncSummary;
     return MaterialApp(
@@ -2344,13 +2240,14 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
             pendingLocation = null;
             position = null;
           }
-          setState(() { countdown = null; page = 0; });
+          setState(() { countdown = null; page = page == 5 ? settingsOrigin : 0; });
         },
         child: RepaintBoundary(
         key: const ValueKey('app-preview'),
         child: Scaffold(
           appBar: AppBar(
-            leading: page == 5 ? BackButton(onPressed: () => setState(() => page = 0)) : null,
+            automaticallyImplyLeading: false,
+            leading: page == 5 ? BackButton(onPressed: () => setState(() => page = settingsOrigin)) : null,
             title: Row(children: [
               Container(width: 32, height: 32, decoration: BoxDecoration(
                 color: const Color(0xffd83750), borderRadius: BorderRadius.circular(11)),
@@ -2369,7 +2266,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
                 ]),
               ),
               if (page != 5) IconButton(tooltip: 'Settings & country',
-                icon: const Icon(Icons.tune_rounded), onPressed: () => setState(() => page = 5)),
+                icon: const Icon(Icons.tune_rounded), onPressed: openSettings),
               const SizedBox(width: 6),
             ],
           ),
@@ -2397,7 +2294,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
                         ]))))),
                 Expanded(child: SafeArea(top: false, bottom: false, child: Center(child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 840),
-                  child: ListView(
+                  child: page == 2 ? assistantPage() : ListView(
                     key: PageStorageKey('safety-page-$page-$country'),
                     keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                     padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
@@ -2414,29 +2311,22 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
               icon: const Icon(Icons.close_rounded), label: const Text('Cancel countdown'))),
           ],
           bottomNavigationBar: page == 5 ? null : NavigationBar(
-            selectedIndex: page,
+            selectedIndex: navPages.indexOf(page),
             labelBehavior: MediaQuery.textScalerOf(ctx).scale(14) > 20
                 ? NavigationDestinationLabelBehavior.alwaysHide
                 : NavigationDestinationLabelBehavior.onlyShowSelected,
             onDestinationSelected: (value) {
               FocusManager.instance.primaryFocus?.unfocus();
-              setState(() => page = value);
+              setState(() => page = navPages[value]);
             },
             destinations: [
-              NavigationDestination(icon: const Icon(Icons.home_outlined), selectedIcon: const Icon(Icons.home_rounded), label: t('Home')),
-              NavigationDestination(icon: const Icon(Icons.emergency_outlined), selectedIcon: const Icon(Icons.emergency_rounded), label: t('SOS')),
-              NavigationDestination(icon: const Icon(Icons.forum_outlined), selectedIcon: const Icon(Icons.forum_rounded), label: t('AI Assistant')),
-              NavigationDestination(icon: const Icon(Icons.travel_explore_outlined), label: t('All Helplines')),
-              NavigationDestination(icon: const Icon(Icons.shield_outlined), selectedIcon: const Icon(Icons.shield_rounded), label: t('My Safety')),
+              NavigationDestination(key: const ValueKey('nav-home'), icon: const Icon(Icons.home_outlined), selectedIcon: const Icon(Icons.home_rounded), label: t('Home')),
+              NavigationDestination(key: const ValueKey('nav-directory'), icon: const Icon(Icons.travel_explore_outlined), label: t('All Helplines')),
+              NavigationDestination(key: const ValueKey('nav-sos'), icon: const Icon(Icons.emergency_outlined, color: Color(0xffe95f74)), selectedIcon: const Icon(Icons.emergency_rounded, color: Color(0xffe95f74)), label: t('SOS')),
+              NavigationDestination(key: const ValueKey('nav-assistant'), icon: const Icon(Icons.auto_awesome_outlined), selectedIcon: const Icon(Icons.auto_awesome_rounded), label: t('AI Assistant')),
+              NavigationDestination(key: const ValueKey('nav-safety'), icon: const Icon(Icons.shield_outlined), selectedIcon: const Icon(Icons.shield_rounded), label: t('My Safety')),
             ],
           ),
-          drawer: Drawer(child: SafeArea(child: ListView(children: [
-            const Padding(padding: EdgeInsets.all(24), child: Text('Global SOS', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700))),
-            for (var index = 0; index < titles.length; index++) ListTile(
-              selected: page == index, title: Text(t(titles[index])),
-              onTap: () { Navigator.pop(ctx); setState(() => page = index); },
-            ),
-          ]))),
         ),
       ))),
     );
@@ -2449,6 +2339,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     unawaited(locationStream?.cancel());
     unawaited(model.dispose());
     unawaited(store.close());
+    assistantScroll.dispose();
     chatInput.dispose();
     queryInput.dispose();
     regionInput.dispose();
@@ -2619,7 +2510,7 @@ class _TripPlanDialogState extends State<_TripPlanDialog> {
           TextButton(onPressed: busy ? null : () => setState(() => checkIn = null),
               child: const Text('Remove check-in time')),
         if (hasPlan)
-          ExpansionTile(title: const Text('Preview plan'), children: [SelectableText(summary)]),
+          SafetyDisclosure(key: const PageStorageKey('trip-preview'), title: const Text('Preview plan'), children: [SelectableText(summary)]),
         Wrap(spacing: 6, children: [
           TextButton(onPressed: !hasPlan || busy ? null : () => run(() async {
             await widget.persist(plan);
