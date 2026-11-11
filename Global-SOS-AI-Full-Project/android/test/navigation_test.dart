@@ -153,8 +153,11 @@ void main() {
     await tester.enterText(find.byType(TextField), 'zqxv qqqqq blorf');
     await tester.tap(find.byKey(const ValueKey('assistant-send'))); await tester.pump();
     expect(requested, isTrue);
-    await tester.tap(find.widgetWithText(TextButton, 'IN')); await tester.pump(const Duration(milliseconds: 350));
-    await tester.tap(find.text('United States')); await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'IN')); await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('United States').hitTestable(), findsOneWidget);
+    await tester.tap(find.text('United States')); await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
     result.complete({'message':'Old-country response','records': [fixture['records'][0]],'mode':'fixture'});
     await tester.pumpAndSettle();
     expect(find.text('Old-country response'), findsNothing);
