@@ -99,7 +99,7 @@ export function IncidentJournal() {
       });
     }}>
       <label>Incident title<input value={title} disabled={busy} maxLength={100} onChange={event => setTitle(event.target.value)}/></label>
-      <label>Notes<textarea value={notes} disabled={busy} maxLength={4000} rows={5} onChange={event => setNotes(event.target.value)} placeholder="What happened? Add only the details you choose to keep."/></label>
+      <label>Notes<textarea aria-label="Notes" value={notes} disabled={busy} maxLength={4000} rows={5} onChange={event => setNotes(event.target.value)} placeholder="What happened? Add only the details you choose to keep."/></label>
       <div className="journal-capture">
         <label className="journal-picker">Take photo<input disabled={busy} aria-label="Take incident photo" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" capture="environment" onChange={pick}/></label>
         <label className="journal-picker">Record video<input disabled={busy} aria-label="Record incident video" type="file" accept="video/mp4,video/webm,video/quicktime,video/3gpp" capture="environment" onChange={pick}/></label>
