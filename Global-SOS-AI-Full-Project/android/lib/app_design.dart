@@ -97,6 +97,30 @@ class SafetyStatusTag extends StatelessWidget {
   );
 }
 
+/// Keep expansion booleans separate from nested text/scroll offsets.
+class SafetyDisclosure extends StatefulWidget {
+  const SafetyDisclosure({super.key, required this.title, required this.children,
+    this.subtitle, this.leading, this.tilePadding, this.maintainState = false});
+  final Widget title;
+  final Widget? subtitle, leading;
+  final EdgeInsetsGeometry? tilePadding;
+  final bool maintainState;
+  final List<Widget> children;
+  @override
+  State<SafetyDisclosure> createState() => _SafetyDisclosureState();
+}
+
+class _SafetyDisclosureState extends State<SafetyDisclosure> {
+  final contentStorage = PageStorageBucket();
+  @override
+  Widget build(BuildContext context) => ExpansionTile(
+    title: widget.title, subtitle: widget.subtitle, leading: widget.leading,
+    tilePadding: widget.tilePadding, maintainState: widget.maintainState,
+    children: [PageStorage(bucket: contentStorage, child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch, children: widget.children))],
+  );
+}
+
 class SafetyPanel extends StatelessWidget {
   const SafetyPanel({super.key, required this.title, required this.children, this.eyebrow});
   final String title;

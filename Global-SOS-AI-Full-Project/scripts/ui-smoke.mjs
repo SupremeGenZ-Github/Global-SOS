@@ -1,7 +1,7 @@
 import {chromium} from 'playwright';
 import {checkV6} from './v6-ui-checks.mjs';
 import {spawn} from 'node:child_process';
-import {readFile} from 'node:fs/promises';
+import {readFile,mkdir} from 'node:fs/promises';
 import assert from 'node:assert/strict';
 const port=4178, origin='http://127.0.0.1:'+port;
 const server=spawn(process.execPath,['backend/server.mjs'],{env:{...process.env,PORT:String(port),DATABASE_URL:'',APP_BASE_URL:origin,CORS_ORIGINS:origin},stdio:'ignore'});
@@ -114,4 +114,8 @@ try {
  console.log('PASS: incident notes and photo persist across reload, export as ZIP and delete from browser storage');
 
  await checkV6(browser,origin);
+} catch(error) {
+ await mkdir('artifacts/web-previews',{recursive:true});let index=0;
+ for(const context of browser?.contexts()??[])for(const page of context.pages()){try{await page.screenshot({path:'artifacts/web-previews/failure-'+(++index)+'.png'});}catch{}}
+ throw error;
 } finally {await browser?.close();server.kill();}

@@ -136,7 +136,7 @@ void main() {
     addTearDown(tester.view.resetViewInsets); await tester.pumpAndSettle();
     final composer = find.byKey(const ValueKey('assistant-composer'));
     expect(tester.getBottomRight(composer).dy, lessThanOrEqualTo(544));
-    expect(find.widgetWithText(FilledButton, 'Send').hitTestable(), findsOneWidget);
+    expect(find.byKey(const ValueKey('assistant-send')).hitTestable(), findsOneWidget);
     await tester.tap(find.byTooltip('Settings & country')); await tester.pumpAndSettle();
     await tester.tap(find.byType(BackButton)); await tester.pumpAndSettle();
     expect(composer, findsOneWidget); expect(tester.takeException(), isNull);
@@ -151,7 +151,7 @@ void main() {
     final toggle = find.widgetWithText(SwitchListTile, 'Allow online AI routing');
     await tester.ensureVisible(toggle); await tester.tap(toggle); await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'zqxv qqqqq blorf');
-    await tester.tap(find.widgetWithText(FilledButton, 'Send')); await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('assistant-send'))); await tester.pump();
     expect(requested, isTrue);
     await tester.tap(find.widgetWithText(TextButton, 'IN')); await tester.pump(const Duration(milliseconds: 350));
     await tester.tap(find.text('United States')); await tester.pumpAndSettle();
@@ -417,8 +417,8 @@ void main() {
       find.byType(TextField),
       'There is smoke in the building',
     );
-    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Send'));
-    await tester.tap(find.widgetWithText(FilledButton, 'Send'));
+    await tester.ensureVisible(find.byKey(const ValueKey('assistant-send')));
+    await tester.tap(find.byKey(const ValueKey('assistant-send')));
     await tester.pumpAndSettle();
     expect(find.text('Offline rules (not an LLM)'), findsOneWidget);
     expect(find.text('Fixture emergency service'), findsOneWidget);
