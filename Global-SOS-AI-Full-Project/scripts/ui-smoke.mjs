@@ -1,4 +1,5 @@
 import {chromium} from 'playwright';
+import {checkV6} from './v6-ui-checks.mjs';
 import {spawn} from 'node:child_process';
 import {readFile} from 'node:fs/promises';
 import assert from 'node:assert/strict';
@@ -109,4 +110,5 @@ try {
  await journalContext.close();
  console.log('PASS: incident notes and photo persist across reload, export as ZIP and delete from browser storage');
 
+ await checkV6(browser,origin);
 } finally {await browser?.close();server.kill();}
