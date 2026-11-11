@@ -92,7 +92,9 @@ try {
  await journal.getByRole('button',{name:'New incident',exact:false}).click();
  await journal.getByLabel('Incident title',{exact:true}).fill('Test incident');
  await journal.getByLabel('Notes',{exact:true}).fill('Private test notes');
+ await journalPage.locator('.journal-editor').evaluate(el=>el.dataset.retentionFixture='draft');
  await journalPage.getByRole('button',{name:'Contacts',exact:true}).click();
+ console.log('Journal retention after Contacts',await journalPage.evaluate(()=>({url:location.href,editors:document.querySelectorAll('.journal-editor').length,retained:!!document.querySelector('[data-retention-fixture="draft"]'),text:document.querySelector('.incident-journal')?.textContent?.slice(-500)})));
  await journalPage.getByRole('button',{name:'Incident journal',exact:true}).click();
  assert.equal(await journal.getByLabel('Notes',{exact:true}).inputValue(),'Private test notes','switching safety sections preserves an incident draft');
  const photo = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jzTYAAAAASUVORK5CYII=','base64');
