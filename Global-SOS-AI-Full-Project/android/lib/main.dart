@@ -1044,15 +1044,15 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
 
   Widget helpline(Json r) {
     final channels = (r['channels'] as List).cast<Json>();
-    return Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(
+    return Builder(builder: (context) => Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(
       crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [Expanded(child: Text((r['categories'] as List).map(categoryLabel).join(' · ').toUpperCase(),
-          style: const TextStyle(fontSize: 10, letterSpacing: .8, fontWeight: FontWeight.w600, color: Color(0xff659beb)))),
+          style: TextStyle(fontSize: 10, letterSpacing: .8, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary))),
           IconButton(tooltip: 'Toggle favorite', onPressed: () {
             setState(() => favorites.contains(r['id']) ? favorites.remove(r['id']) : favorites.add(r['id']));
             unawaited(prefs?.setStringList('favorites', favorites));
           }, icon: Icon(favorites.contains(r['id']) ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
-            color: const Color(0xff659beb))),
+            color: Theme.of(context).colorScheme.primary)),
         ]),
         Text(r['name'].toString(), style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700, height: 1.25)),
         const SizedBox(height: 10),
@@ -1071,7 +1071,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         Text(channels.any((channel) => channel['immediate'] == true)
           ? 'Emergency channel listed. Check its restrictions.' : 'Support or reporting. For immediate danger, use SOS.',
           style: const TextStyle(fontSize: 11, height: 1.5)),
-        ExpansionTile(tilePadding: EdgeInsets.zero, title: const Text('Source & service details', style: TextStyle(fontSize: 12)), children: [
+        ExpansionTile(key: PageStorageKey('source-details-${r['id']}'), tilePadding: EdgeInsets.zero, title: const Text('Source & service details', style: TextStyle(fontSize: 12)), children: [
           for (final channel in channels.where((item) => item['notes'] != null))
             Padding(padding: const EdgeInsets.only(bottom: 10), child: Text('${channel['kind']}: ${channel['notes']}', style: const TextStyle(fontSize: 12, height: 1.5))),
           Align(alignment: AlignmentDirectional.centerStart, child: Text(
@@ -1080,7 +1080,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
           TextButton(onPressed: () => unawaited(open(channelUri({'kind': 'web', 'value': r['source_url']}))),
             child: const Text('Open official government source ↗')),
         ]),
-      ])));
+      ]))));
   }
 
   String get countryName {
@@ -1274,7 +1274,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       'A clear path to urgent help. Confirm the country, choose your location preference, then start.',
     ),
     if (preparingSOS) const LinearProgressIndicator(),
-    Card(child: ExpansionTile(leading: const Icon(Icons.shield_outlined), title: const Text('Your SOS plan'),
+    Card(child: ExpansionTile(key: const PageStorageKey('sos-plan'), leading: const Icon(Icons.shield_outlined), title: const Text('Your SOS plan'),
       subtitle: Text('${(safety['contacts'] as List).length} trusted contacts · ${safety['automaticAlerts'] == true ? 'Automatic alerts on' : 'Automatic alerts off'}'),
       children: [const Padding(padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         child: Text('1 · Review location choices\n2 · Five seconds to cancel\n3 · Press Call in the dialer')),
@@ -1401,23 +1401,16 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       'AI Assistant',
       'Describe what is happening. Find the right contact.',
     ),
-    ExpansionTile(
-      title: Text(t('Help me choose')),
-      children: [
-        for (final (label, value) in [
-          ('Medical emergency', 'ambulance'),
-          ('Fire and rescue', 'fire'),
-          ('Personal safety', 'police'),
-          ('Online fraud', 'cyber'),
-          ('Domestic violence', 'domestic'),
-          ('Child protection', 'child'),
-        ])
-          ListTile(
-            title: Text(label),
-            onTap: () => browseCategory(value),
-          ),
-      ],
-    ),
+    if (conversation.isEmpty) Builder(builder: (context) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24), child: Column(children: [
+        Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.primaryContainer, borderRadius: BorderRadius.circular(22)),
+          child: Icon(Icons.auto_awesome_rounded, size: 34, color: Theme.of(context).colorScheme.onPrimaryContainer)),
+        const SizedBox(height: 18), const Text('What kind of help do you need?', textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, height: 1.25)),
+        const SizedBox(height: 10), const Text('Choose an example, or type below. Share only what is needed.',
+          textAlign: TextAlign.center, style: TextStyle(fontSize: 13, height: 1.6)),
+      ]))),
     if (conversation.isEmpty)
       Wrap(
         spacing: 8,
@@ -1435,6 +1428,24 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
             ),
         ],
       ),
+    ExpansionTile(
+      key: const PageStorageKey('assistant-categories'),
+      title: Text(t('Help me choose')),
+      children: [
+        for (final (label, value) in [
+          ('Medical emergency', 'ambulance'),
+          ('Fire and rescue', 'fire'),
+          ('Personal safety', 'police'),
+          ('Online fraud', 'cyber'),
+          ('Domestic violence', 'domestic'),
+          ('Child protection', 'child'),
+        ])
+          ListTile(
+            title: Text(label),
+            onTap: () => browseCategory(value),
+          ),
+      ],
+    ),
     if (conversation.isNotEmpty && !busy)
       Align(
         alignment: AlignmentDirectional.centerEnd,
@@ -1444,7 +1455,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
           label: const Text('Clear conversation'),
         ),
       ),
-    Card(child: ExpansionTile(title: const Text('Routing preferences'), leading: const Icon(Icons.tune_rounded),
+    Card(child: ExpansionTile(key: const PageStorageKey('assistant-routing'), title: const Text('Routing preferences'), leading: const Icon(Icons.tune_rounded),
       children: [Padding(padding: const EdgeInsets.all(16), child: Column(children: [
     SwitchListTile(
       contentPadding: EdgeInsets.zero,
@@ -1461,14 +1472,6 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
           : '${model.loaded ? 'Local model loaded' : 'Optional local model not loaded'} · No chat text sent online',
     ),
 ]))])),
-    if (conversation.isEmpty)
-      const Padding(
-        padding: EdgeInsets.symmetric(vertical: 22),
-        child: Text(
-          'What kind of help do you need?\nFor example: “There is smoke in my building.”',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600, height: 1.4),
-        ),
-      ),
     ...conversation.map(
       (m) => Card(
         color: m['user'] == true ? (light ? const Color(0xffe6edfc) : const Color(0xff1b2b45)) : null,
@@ -1540,7 +1543,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
           catch (_) { note('Voice input unavailable. You can type your message instead.'); }
         }), const SizedBox(width: 6),
           Expanded(child: Text(allowOnline ? 'Online with local fallback' : 'On-device routing', style: Theme.of(context).textTheme.labelSmall)),
-          FilledButton(onPressed: busy ? null : sendChat, child: const Text('Send ↗'))]),
+          FilledButton.icon(onPressed: busy ? null : sendChat, icon: const Icon(Icons.arrow_upward_rounded, size: 18), label: const Text('Send'))]),
       ]))),
   ]);
 
@@ -1611,7 +1614,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
         onChanged: (v) => setState(() => category = v ?? ''),
       ),
       const SizedBox(height: 12),
-      Card(child: ExpansionTile(title: const Text('More filters'), leading: const Icon(Icons.filter_alt_outlined),
+      Card(child: ExpansionTile(key: const PageStorageKey('directory-filters'), title: const Text('More filters'), leading: const Icon(Icons.filter_alt_outlined),
         children: [Padding(padding: const EdgeInsets.all(16), child: Column(children: [
       DropdownButtonFormField<String>(
         key: ValueKey('channel-$channel'),
@@ -1873,6 +1876,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       SafetyActionRow(icon: Icons.badge_outlined, title: 'Offline emergency card', caption: 'View and share your saved details', onTap: showEmergencyCard),
     ]),
     Card(child: ExpansionTile(
+      key: const PageStorageKey('safety-sharing'),
       maintainState: true,
       leading: const Icon(Icons.notifications_outlined),
       title: const Text('Alerts and check-ins'),
@@ -1917,7 +1921,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     const Text('Favorite services', style: TextStyle(fontSize: 22)),
     ...records.where((r) => favorites.contains(r['id'])).map(helpline),
     const SizedBox(height: 20),
-    Card(child: ExpansionTile(title: const Text('Automatic alert preferences'), leading: const Icon(Icons.send_outlined),
+    Card(child: ExpansionTile(key: const PageStorageKey('automatic-alerts'), title: const Text('Automatic alert preferences'), leading: const Icon(Icons.send_outlined),
       children: [Padding(padding: const EdgeInsets.all(18), child: Column(children: [
     SwitchListTile(
       title: const Text(
@@ -2041,7 +2045,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
       },
     ),
 ]),
-    Card(child: ExpansionTile(title: const Text('Voice & location preferences'), leading: const Icon(Icons.tune_rounded), children: [Padding(padding: const EdgeInsets.all(20), child: Column(children: [
+    Card(child: ExpansionTile(key: const PageStorageKey('voice-location-settings'), title: const Text('Voice & location preferences'), leading: const Icon(Icons.tune_rounded), children: [Padding(padding: const EdgeInsets.all(20), child: Column(children: [
     const SizedBox(height: 20),
     DropdownButtonFormField<String>(
       initialValue: voiceLanguage,
@@ -2113,7 +2117,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     OutlinedButton(onPressed: sync, child: const Text('Synchronize directory')),
     const SizedBox(height: 24),
 ]),
-    Card(child: ExpansionTile(title: const Text('Optional offline model'), leading: const Icon(Icons.memory_rounded), children: [Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    Card(child: ExpansionTile(key: const PageStorageKey('offline-model-settings'), title: const Text('Optional offline model'), leading: const Icon(Icons.memory_rounded), children: [Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
     const Text(
       'Optional offline language model',
       style: TextStyle(fontSize: 23),
@@ -2179,7 +2183,7 @@ class _GlobalSOSState extends State<GlobalSOS> with WidgetsBindingObserver {
     ),
     const SizedBox(height: 24),
 ]))])),
-    Card(child: ExpansionTile(title: const Text('Privacy & device data'), leading: const Icon(Icons.lock_outline_rounded), children: [Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    Card(child: ExpansionTile(key: const PageStorageKey('privacy-settings'), title: const Text('Privacy & device data'), leading: const Icon(Icons.lock_outline_rounded), children: [Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
     const Text(
       'Public-service calls, SMS, WhatsApp and email open external applications; complete each action there. Optional provider alerts notify only consenting trusted contacts you explicitly enable, with a configured private backend.\n\nLocation sharing requires consent and a private server session. Links expire after one hour. Mark Safe or Cancel removes stored positions. Sharing stops when the app leaves the foreground.\n\nCountry detection gives a coarse offline suggestion and optional Android address lookup; confirm it yourself. No medical diagnosis, guaranteed response, background tracking or automatic emergency dispatch. Online routing requires your own configured server. Government webpage checks do not certify live availability.\n\nThe model identifies intent only. Untrusted model text is never displayed as contact information.',
       style: TextStyle(height: 1.7),
@@ -2506,7 +2510,7 @@ class _TripPlanDialogState extends State<_TripPlanDialog> {
           TextButton(onPressed: busy ? null : () => setState(() => checkIn = null),
               child: const Text('Remove check-in time')),
         if (hasPlan)
-          ExpansionTile(title: const Text('Preview plan'), children: [SelectableText(summary)]),
+          ExpansionTile(key: const PageStorageKey('trip-preview'), title: const Text('Preview plan'), children: [SelectableText(summary)]),
         Wrap(spacing: 6, children: [
           TextButton(onPressed: !hasPlan || busy ? null : () => run(() async {
             await widget.persist(plan);

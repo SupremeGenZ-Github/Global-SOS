@@ -23,6 +23,7 @@ try {
  });
  await page.goto(origin,{waitUntil:'networkidle'});
  await page.locator('nav button').filter({hasText:'My Safety'}).click();
+ await page.getByText('Automatic alert preferences',{exact:true}).click();
  await page.getByPlaceholder('Configured operator token').fill('test-token-only-never-a-provider-secret');
  await page.locator('nav button').filter({hasText:'Home'}).click();
  await page.locator('.sos-orb').click();
@@ -75,6 +76,7 @@ try {
  await desktop.getByRole('region',{name:'Desktop safety console'}).waitFor();
  assert.equal(await desktop.locator('.phone-home').isVisible(),false);
  await desktop.locator('.desktop-console').getByRole('button',{name:'My Safety',exact:true}).click();
+ await desktop.getByRole('button',{name:'Tools',exact:true}).click();
  await desktop.getByRole('region',{name:'Safety tools'}).waitFor();
  await desktop.goto(origin+'/mobile');
  await desktop.locator('.phone-home').waitFor();
@@ -85,6 +87,7 @@ try {
  const journalPage = await journalContext.newPage();
  await journalPage.goto(origin+'/mobile');
  await journalPage.locator('nav button').filter({hasText:'My Safety'}).click();
+ await journalPage.getByRole('button',{name:'Incident journal',exact:true}).click();
  const journal = journalPage.getByRole('region',{name:'Incident journal'});
  await journal.getByRole('button',{name:'New incident',exact:false}).click();
  await journal.getByLabel('Incident title',{exact:true}).fill('Test incident');
@@ -94,7 +97,7 @@ try {
  await journal.getByRole('button',{name:'Save incident',exact:true}).click();
  await journal.getByText('Incident saved on this device.').waitFor();
  await journalPage.reload();
- await journalPage.locator('nav button').filter({hasText:'My Safety'}).click();
+ await journalPage.getByRole('button',{name:'Incident journal',exact:true}).click();
  await journal.locator('.journal-record-title').click();
  assert.match(await journal.innerText(),/Private test notes/);
  const exporting = journalPage.waitForEvent('download');

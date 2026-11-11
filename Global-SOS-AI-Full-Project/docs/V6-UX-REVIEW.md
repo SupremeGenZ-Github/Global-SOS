@@ -29,6 +29,7 @@ These are interaction references. Global SOS uses its own implementation and doe
 | Assistant input scrolls out of reach in Android | Separate composer follows keyboard insets | Flutter keyboard layout regression |
 | Native Settings Back always returns Home | Return to the preceding screen | Flutter navigation regression |
 | Contact validation silently ignores invalid data | Field-specific validation; dialog owns controllers for its lifetime | Flutter contact flow regression |
+| Switching themes/screens can collide with expansion/scroll state | Isolate expansion state with stable identifiers | Flutter screen/theme regressions |
 | Older secure writes can finish after newer edits/deletion | Ordered writes, with recoverable failures | Controlled asynchronous vault tests |
 | Recreated web service-card components close details on a favorite action | Stable keyed article elements | Browser regression |
 | Browser storage failures can crash persistence effects | Safety controls remain usable and persistence warning is shown | Blocked-storage browser regression |
