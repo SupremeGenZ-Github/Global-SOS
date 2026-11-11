@@ -46,10 +46,12 @@ export async function checkV6(browser,origin){
  await page.screenshot({path:'artifacts/web-previews/v6-mobile-safety.png'});
  await page.getByRole('button',{name:'Settings',exact:true}).click();
  await page.getByLabel('Light theme',{exact:true}).check();await go('Home');
+ assert.ok(await page.locator('aside nav').evaluate(el=>el.getBoundingClientRect().width>=window.innerWidth-30),'phone navigation fills the viewport');
  await page.screenshot({path:'artifacts/web-previews/v6-mobile-home-light.png'});
  await page.setViewportSize({width:320,height:780});await page.getByLabel('Interface language').selectOption('ar');
  assert.ok(await page.locator('body').evaluate(el=>el.scrollWidth<=window.innerWidth),'Arabic 320px screen does not overflow');
  await page.getByLabel('Interface language').selectOption('en');
+ assert.ok(await page.locator('aside nav').evaluate(el=>el.getBoundingClientRect().width>=window.innerWidth-30),'320px navigation fills the viewport');
  await page.screenshot({path:'artifacts/web-previews/v6-mobile-320.png'});
  assert.deepEqual(errors,[]);await context.close();
  const desktop=await browser.newPage({viewport:{width:1440,height:1000},reducedMotion:'reduce'});

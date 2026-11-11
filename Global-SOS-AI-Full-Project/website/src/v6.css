@@ -17,7 +17,8 @@ body{background:var(--bg);color:var(--text)}.v6-shell{grid-template-columns:248p
 @media(prefers-reduced-motion:no-preference){.v6-shell main{animation:v6-appear .2s ease-out}@keyframes v6-appear{from{opacity:.7;transform:translateY(5px)}to{opacity:1;transform:none}}}@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
 /* Give translated phone navigation labels their own readable space. */
+.v6-shell.layout-mobile aside nav{width:100%}
 .v6-shell nav button .nav-label{display:block;width:auto;font-size:inherit;text-align:inherit}
 .v6-shell.layout-mobile aside nav button{min-height:68px;white-space:normal;font-size:10px}
 .v6-shell.layout-mobile aside nav button .nav-label{width:100%;min-height:25px;line-height:1.25;white-space:normal}
-@media(max-width:800px){.v6-shell.layout-auto aside nav button{min-height:68px;white-space:normal;font-size:10px}.v6-shell.layout-auto aside nav button .nav-label{width:100%;min-height:25px;line-height:1.25;white-space:normal}}
+@media(max-width:959px){.v6-shell.layout-auto aside nav{width:100%}.v6-shell.layout-auto aside nav button{min-height:68px;white-space:normal;font-size:10px}.v6-shell.layout-auto aside nav button .nav-label{width:100%;min-height:25px;line-height:1.25;white-space:normal}}
