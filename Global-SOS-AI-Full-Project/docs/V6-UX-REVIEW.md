@@ -23,6 +23,7 @@ These are interaction references. Global SOS uses its own implementation and doe
 
 | Issue found in audit | v6 behavior | Verification |
 | --- | --- | --- |
+| Unsaved journal/trip drafts disappear on internal navigation | Keep visited editors mounted while hiding inactive panels | Browser draft-retention regressions |
 | Browser Back/reload loses the selected screen | Routed screen is stored in the URL and restored | Browser regression |
 | Country changes retain stale filters or async replies | Reset filters and invalidate pending assistant responses | Browser and Flutter regressions |
 | Web countdown Cancel disappears after navigating away | Cancel stays pinned across screens | Mocked browser SOS regression |

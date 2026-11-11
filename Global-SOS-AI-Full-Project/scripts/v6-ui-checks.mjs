@@ -35,7 +35,15 @@ export async function checkV6(browser,origin){
  const response=page.waitForResponse(r=>r.url().endsWith('/api/chat'));release();await response;await page.waitForTimeout(200);
  assert.equal(await page.getByText('Old-country response',{exact:true}).count(),0,'old assistant responses cannot cross countries');
  await page.screenshot({path:'artifacts/web-previews/v6-mobile-assistant.png'});
- await go('My Safety');await page.screenshot({path:'artifacts/web-previews/v6-mobile-safety.png'});
+ await go('My Safety');
+ await page.getByRole('button',{name:'Tools',exact:true}).click();
+ await page.getByText('Trip planner and calendar reminders',{exact:true}).click();
+ await page.getByLabel('Destination',{exact:true}).fill('Fixture trip');
+ await page.getByRole('button',{name:'Contacts',exact:true}).click();
+ await page.getByRole('button',{name:'Tools',exact:true}).click();
+ assert.equal(await page.getByLabel('Destination',{exact:true}).inputValue(),'Fixture trip','switching safety sections preserves a trip draft');
+ await page.getByRole('button',{name:'Contacts',exact:true}).click();
+ await page.screenshot({path:'artifacts/web-previews/v6-mobile-safety.png'});
  await page.getByRole('button',{name:'Settings',exact:true}).click();
  await page.getByLabel('Light theme',{exact:true}).check();await go('Home');
  await page.screenshot({path:'artifacts/web-previews/v6-mobile-home-light.png'});

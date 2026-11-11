@@ -92,6 +92,9 @@ try {
  await journal.getByRole('button',{name:'New incident',exact:false}).click();
  await journal.getByLabel('Incident title',{exact:true}).fill('Test incident');
  await journal.getByLabel('Notes',{exact:true}).fill('Private test notes');
+ await journalPage.getByRole('button',{name:'Contacts',exact:true}).click();
+ await journalPage.getByRole('button',{name:'Incident journal',exact:true}).click();
+ assert.equal(await journal.getByLabel('Notes',{exact:true}).inputValue(),'Private test notes','switching safety sections preserves an incident draft');
  const photo = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jzTYAAAAASUVORK5CYII=','base64');
  await journal.getByLabel('Choose incident attachments').setInputFiles({name:'fixture.png',mimeType:'image/png',buffer:photo});
  await journal.getByRole('button',{name:'Save incident',exact:true}).click();

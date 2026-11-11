@@ -14,6 +14,7 @@ A Flutter Android app, React website and Node.js API for finding reviewed emerge
 - A separate desktop workspace, and a phone website with the same information order as the Android app.
 - An Android assistant composer that stays above the keyboard, with voice input beside Send. Browser prompts can be edited before sending.
 - Contacts first in My Safety, personal tools grouped together, secondary filters and settings behind disclosures.
+- Browser incident and trip drafts survive internal navigation. Save or export them before closing the tab.
 - Persistent SOS cancellation across tabs, correct browser Back/reload routing, country-change filter resets and protection against stale assistant responses.
 - Field-level contact validation, correct Settings Back navigation, ordered secure-storage writes and recoverable browser-storage errors.
 - Exported packages exclude private environment files. A fixture-based package check verifies this.
